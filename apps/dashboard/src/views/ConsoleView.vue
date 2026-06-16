@@ -1,7 +1,25 @@
 <script setup lang="ts">
 import type { User } from '@supabase/supabase-js'
 import { computed, onMounted, ref, watch } from 'vue'
-import { ArrowRight, CheckCircle2, Copy, Loader2, LogOut, RefreshCw, Rocket, Settings, Smartphone, UploadCloud } from 'lucide-vue-next'
+import {
+  ArrowLeft,
+  BarChart3,
+  BookOpen,
+  CheckCircle2,
+  Copy,
+  KeyRound,
+  Loader2,
+  LogOut,
+  Menu,
+  PackagePlus,
+  RefreshCw,
+  Rocket,
+  Settings,
+  Smartphone,
+  UploadCloud,
+  Users,
+  X,
+} from 'lucide-vue-next'
 import {
   createDashboardClient,
   getCurrentSession,
@@ -25,12 +43,16 @@ const pending = ref(false)
 const error = ref('')
 const notice = ref('')
 const copiedCommand = ref('')
+const sidebarOpen = ref(false)
+const stepsOpen = ref(false)
+const stepIndex = ref(0)
 const selectedPlan = ref(normalizePlan(new URLSearchParams(window.location.search).get('plan')))
 const selectedBilling = ref(normalizeBillingPeriod(new URLSearchParams(window.location.search).get('billing') || new URLSearchParams(window.location.search).get('interval')))
 const planRecorded = ref(false)
 
 const selectedApp = computed(() => apps.value.find(app => app.app_id === selectedAppId.value))
 const hasApps = computed(() => apps.value.length > 0)
+const showSteps = computed(() => !hasApps.value || stepsOpen.value)
 const displayName = computed(() => {
   const metadata = user.value?.user_metadata || {}
   const name = [metadata.first_name, metadata.last_name].filter(Boolean).join(' ')
@@ -38,6 +60,12 @@ const displayName = computed(() => {
 })
 const firstName = computed(() => String(user.value?.user_metadata?.first_name || ''))
 const lastName = computed(() => String(user.value?.user_metadata?.last_name || ''))
+const latestRelease = computed(() => releases.value[0])
+const monthlyDevices = computed(() => apps.value.reduce((total, app) => total + Number((app as ConsoleAppRecord & { mau?: number | null }).mau || 0), 0))
+const releasesByPlatform = computed(() => releases.value.reduce<Record<string, number>>((acc, release) => {
+  acc[release.platform] = (acc[release.platform] || 0) + 1
+  return acc
+}, {}))
 
 const onboardingCommands = computed(() => [
   {
@@ -46,19 +74,24 @@ const onboardingCommands = computed(() => [
     subtitle: 'Use the API key from this console when key creation is enabled.',
   },
   {
-    title: 'Add your React Native app',
+    title: 'Connect your React Native app',
     command: 'npx @codepushgo/cli@latest init',
-    subtitle: 'The CLI should detect the native bundle ID from ios and android projects.',
+    subtitle: 'Run it in the app folder. The CLI detects ios bundleIdentifier or Android applicationId by default.',
   },
   {
     title: 'Install the updater client',
     command: 'npm install @codepushgo/react-native-updater',
-    subtitle: 'Native build support is intentionally out of scope for this first console.',
+    subtitle: 'Keep the native project identity as the app id; JavaScript updates use that same id.',
   },
   {
     title: 'Bundle and upload',
-    command: 'npx @codepushgo/cli@latest bundle --platform ios && npx @codepushgo/cli@latest upload',
-    subtitle: 'Upload JavaScript bundles through the Cloudflare Worker backend.',
+    command: 'npx @codepushgo/cli@latest upload',
+    subtitle: 'Build the JavaScript bundle and upload it through the Cloudflare Worker backend.',
+  },
+  {
+    title: 'Open your dashboard',
+    command: '',
+    subtitle: 'This page updates when the first app and release exist in Supabase.',
   },
 ])
 
@@ -108,9 +141,13 @@ async function refreshReleases() {
   releases.value = await listAppReleases(client, selectedAppId.value)
 }
 
-async function copyCommand(command: string) {
+async function copyCommand(command: string, index?: number) {
+  if (!command)
+    return
   await navigator.clipboard.writeText(command)
   copiedCommand.value = command
+  if (typeof index === 'number' && index >= stepIndex.value)
+    stepIndex.value = Math.min(index + 1, onboardingCommands.value.length - 1)
   setTimeout(() => {
     if (copiedCommand.value === command)
       copiedCommand.value = ''
@@ -166,47 +203,64 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="console-shell">
-    <aside class="console-sidebar">
-      <div class="brand">
-        <span class="mark">CG</span>
-        <div>
-          <h1>CodePushGo</h1>
-          <p>React Native updates</p>
-        </div>
+  <main class="capgo-console-shell">
+    <div class="sidebar-backdrop" :class="{ visible: sidebarOpen }" @click="sidebarOpen = false" />
+
+    <aside class="capgo-sidebar" :class="{ open: sidebarOpen }" aria-label="Console navigation">
+      <div class="sidebar-header">
+        <a class="sidebar-logo" href="/app/home" aria-label="CodePushGo console">
+          <span class="mark">CG</span>
+          <span>CodePushGo</span>
+        </a>
+        <button class="sidebar-close" type="button" aria-label="Close sidebar" @click="sidebarOpen = false">
+          <X :size="18" />
+        </button>
       </div>
 
-      <nav class="console-nav" aria-label="Console navigation">
+      <div class="nav-group">
+        <p>Pages</p>
         <a class="active" href="/app/home">
-          <Smartphone :size="16" />
-          Apps
+          <BarChart3 :size="19" />
+          Dashboard
+        </a>
+        <a href="/dashboard/apikeys">
+          <KeyRound :size="19" />
+          API Keys
         </a>
         <a href="/dashboard/settings/plans">
-          <Settings :size="16" />
+          <Settings :size="19" />
           Plans
         </a>
-      </nav>
+        <a href="https://codepushgo.com/docs/" target="_blank" rel="noreferrer">
+          <BookOpen :size="19" />
+          Documentation
+        </a>
+      </div>
 
-      <section class="panel user-panel">
-        <p class="eyebrow">Signed in</p>
+      <div class="sidebar-account">
+        <p>Signed in</p>
         <strong>{{ displayName }}</strong>
         <small>{{ user?.email }}</small>
         <button type="button" @click="signOut">
           <LogOut :size="16" />
           Sign out
         </button>
-      </section>
+      </div>
     </aside>
 
-    <section class="console-content">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Console</p>
-          <h2>Apps</h2>
-        </div>
+    <section class="capgo-console-content">
+      <header class="console-navbar">
+        <button class="menu-button" type="button" aria-label="Open sidebar" @click="sidebarOpen = true">
+          <Menu :size="20" />
+        </button>
+        <div class="navbar-spacer" />
         <button type="button" :disabled="pending || loading" @click="refresh">
           <RefreshCw :size="16" />
           Refresh
+        </button>
+        <button v-if="hasApps && !showSteps" class="primary" type="button" @click="stepsOpen = true">
+          <PackagePlus :size="16" />
+          Add app
         </button>
       </header>
 
@@ -221,18 +275,23 @@ onMounted(async () => {
         Loading console
       </section>
 
-      <template v-else>
-        <section v-if="!hasApps" class="onboarding-view">
-          <div class="onboarding-head">
-            <p class="eyebrow">Start using CodePushGo</p>
-            <h2>Add your first React Native app</h2>
-            <p>Copy the commands in order. The app should connect through the native bundle ID by default, matching the Capgo console flow adapted for React Native.</p>
+      <template v-else-if="showSteps">
+        <section class="steps-screen">
+          <button v-if="hasApps" class="back-link" type="button" @click="stepsOpen = false">
+            <ArrowLeft :size="16" />
+            Back to dashboard
+          </button>
+
+          <div class="steps-heading">
+            <h1>{{ hasApps ? 'Add another app' : 'Start using CodePushGo' }}</h1>
+            <p>Connect the React Native app from its native bundle ID, then upload JavaScript bundles from the CLI.</p>
+            <small>Copy each command in order. The CLI auto-detects the app identity from your iOS or Android project.</small>
           </div>
 
-          <div class="onboarding-grid">
-            <article class="panel plan-panel">
+          <div class="steps-layout">
+            <article class="plan-intent-card">
               <p class="eyebrow">Plan intent</p>
-              <h3>Choose after registration</h3>
+              <h2>Choose during onboarding</h2>
               <div class="segmented" aria-label="Billing period">
                 <button :class="{ active: selectedBilling === 'monthly' }" type="button" @click="selectedBilling = 'monthly'">Monthly</button>
                 <button :class="{ active: selectedBilling === 'yearly' }" type="button" @click="selectedBilling = 'yearly'">Yearly</button>
@@ -240,11 +299,11 @@ onMounted(async () => {
               <div class="plan-picker compact-plan-picker" aria-label="Plan intent">
                 <button type="button" :class="{ active: selectedPlan === 'trial' }" @click="selectedPlan = 'trial'">
                   <span>Trial</span>
-                  <small>Start with one app</small>
+                  <small>Validate live updates</small>
                 </button>
                 <button type="button" :class="{ active: selectedPlan === 'solo' }" @click="selectedPlan = 'solo'">
                   <span>Solo</span>
-                  <small>For a production app</small>
+                  <small>One production app</small>
                 </button>
                 <button type="button" :class="{ active: selectedPlan === 'team' }" @click="selectedPlan = 'team'">
                   <span>Team</span>
@@ -257,113 +316,154 @@ onMounted(async () => {
               </button>
             </article>
 
-            <div class="steps-list">
-              <article v-for="(step, index) in onboardingCommands" :key="step.title" class="step-card">
-                <span class="step-index">{{ index + 1 }}</span>
-                <div>
-                  <h3>{{ step.title }}</h3>
-                  <button class="command" type="button" @click="copyCommand(step.command)">
-                    <code>{{ step.command }}</code>
-                    <Copy :size="16" />
-                  </button>
-                  <p>{{ copiedCommand === step.command ? 'Copied' : step.subtitle }}</p>
-                </div>
-              </article>
+            <div class="capgo-steps-list">
+              <template v-for="(item, index) in onboardingCommands" :key="item.title">
+                <div v-if="index > 0" class="step-connector" />
+                <article class="capgo-step" :class="{ muted: stepIndex !== index }">
+                  <span class="capgo-step-index">{{ index < onboardingCommands.length - 1 ? index + 1 : 'GO' }}</span>
+                  <div>
+                    <h2>{{ item.title }}</h2>
+                    <button v-if="item.command" class="command" type="button" @click="copyCommand(item.command, index)">
+                      <code>{{ item.command }}</code>
+                      <Copy :size="16" />
+                    </button>
+                    <p>{{ copiedCommand === item.command ? 'Copied to clipboard' : item.subtitle }}</p>
+                  </div>
+                </article>
+              </template>
             </div>
           </div>
         </section>
+      </template>
 
-        <template v-else>
-          <section class="apps-layout">
-            <aside class="panel apps-panel">
-              <div class="section-head compact">
-                <h3>Your apps</h3>
-                <span>{{ apps.length }}</span>
-              </div>
-              <div class="stack">
-                <button
+      <template v-else>
+        <section class="dashboard-page-head">
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h1>Apps</h1>
+          </div>
+          <button class="primary" type="button" @click="copyCommand('npx @codepushgo/cli@latest upload')">
+            <UploadCloud :size="16" />
+            Upload command
+          </button>
+        </section>
+
+        <section class="dashboard-grid">
+          <article class="metric-card usage-card">
+            <div>
+              <p>Usage</p>
+              <strong>{{ monthlyDevices }}</strong>
+              <span>monthly active devices</span>
+            </div>
+            <Smartphone :size="24" />
+          </article>
+          <article class="metric-card">
+            <div>
+              <p>Apps</p>
+              <strong>{{ apps.length }}</strong>
+              <span>connected bundle IDs</span>
+            </div>
+            <PackagePlus :size="24" />
+          </article>
+          <article class="metric-card">
+            <div>
+              <p>Latest release</p>
+              <strong>{{ latestRelease?.version || '-' }}</strong>
+              <span>{{ latestRelease?.channel || 'no release yet' }}</span>
+            </div>
+            <Rocket :size="24" />
+          </article>
+        </section>
+
+        <section class="console-table-card top-apps-card">
+          <header>
+            <h2>Top apps</h2>
+            <span>{{ apps.length }}</span>
+          </header>
+          <div class="table-scroll">
+            <table aria-label="Table with your apps">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Native bundle ID</th>
+                  <th>Releases</th>
+                  <th>iOS</th>
+                  <th>Android</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
                   v-for="app in apps"
                   :key="app.app_id"
-                  class="app-row"
+                  class="app-table-row"
                   :class="{ active: app.app_id === selectedAppId }"
-                  type="button"
                   @click="selectedAppId = app.app_id"
                 >
-                  <span>{{ app.name }}</span>
-                  <small>{{ app.app_id }}</small>
-                </button>
-              </div>
-            </aside>
+                  <td>
+                    <div class="app-name-cell">
+                      <span class="app-icon">{{ app.name.slice(0, 2).toUpperCase() }}</span>
+                      <strong>{{ app.name }}</strong>
+                    </div>
+                  </td>
+                  <td><code>{{ app.app_id }}</code></td>
+                  <td>{{ app.app_id === selectedAppId ? releases.length : '-' }}</td>
+                  <td>{{ app.app_id === selectedAppId ? (releasesByPlatform.ios || 0) : '-' }}</td>
+                  <td>{{ app.app_id === selectedAppId ? (releasesByPlatform.android || 0) : '-' }}</td>
+                  <td>{{ app.created_at ? new Date(app.created_at).toLocaleDateString() : '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-            <section class="panel releases">
-              <div class="section-head">
-                <div>
-                  <p class="eyebrow">{{ selectedApp?.app_id }}</p>
-                  <h3>{{ selectedApp?.name || 'React Native app' }}</h3>
-                </div>
-                <button type="button" :disabled="pending || !selectedAppId" @click="refreshReleases">
-                  <RefreshCw :size="16" />
-                  Reload
-                </button>
-              </div>
-
-              <div class="metrics-strip">
-                <div>
-                  <strong>{{ releases.length }}</strong>
-                  <span>recent releases</span>
-                </div>
-                <div>
-                  <strong>{{ releases[0]?.channel || 'production' }}</strong>
-                  <span>latest channel</span>
-                </div>
-                <div>
-                  <strong>{{ releases[0]?.version || '-' }}</strong>
-                  <span>latest version</span>
-                </div>
-              </div>
-
-              <div class="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Version</th>
-                      <th>Platform</th>
-                      <th>Channel</th>
-                      <th>Rollout</th>
-                      <th>Size</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="release in releases" :key="`${release.app_id}-${release.platform}-${release.channel}-${release.version}`">
-                      <td>{{ release.version }}</td>
-                      <td>{{ release.platform }}</td>
-                      <td>{{ release.channel }}</td>
-                      <td>{{ release.rollout ?? 100 }}%</td>
-                      <td>{{ release.size ? `${Math.round(release.size / 1024)} KB` : '-' }}</td>
-                      <td>{{ release.created_at ? new Date(release.created_at).toLocaleString() : '-' }}</td>
-                    </tr>
-                    <tr v-if="releases.length === 0">
-                      <td colspan="6" class="empty">No releases yet for this native bundle ID.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </section>
-
-          <section class="panel upload-note">
-            <Rocket :size="20" />
+        <section class="console-table-card releases-card">
+          <header>
             <div>
-              <h3>Upload from the CLI</h3>
-              <p>Bundle uploads stay in the CLI/Worker path. The console reads the resulting apps and releases from Supabase like Capgo, adapted for React Native.</p>
+              <p class="eyebrow">{{ selectedApp?.app_id }}</p>
+              <h2>{{ selectedApp?.name || 'Releases' }}</h2>
             </div>
-            <button type="button" @click="copyCommand('npx @codepushgo/cli@latest upload')">
-              <UploadCloud :size="16" />
-              Copy upload command
+            <button type="button" :disabled="pending || !selectedAppId" @click="refreshReleases">
+              <RefreshCw :size="16" />
+              Reload
             </button>
-          </section>
-        </template>
+          </header>
+          <div class="table-scroll">
+            <table aria-label="Release table">
+              <thead>
+                <tr>
+                  <th>Version</th>
+                  <th>Platform</th>
+                  <th>Channel</th>
+                  <th>Rollout</th>
+                  <th>Size</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="release in releases" :key="`${release.app_id}-${release.platform}-${release.channel}-${release.version}`">
+                  <td>{{ release.version }}</td>
+                  <td>{{ release.platform }}</td>
+                  <td>{{ release.channel }}</td>
+                  <td>{{ release.rollout ?? 100 }}%</td>
+                  <td>{{ release.size ? `${Math.round(release.size / 1024)} KB` : '-' }}</td>
+                  <td>{{ release.created_at ? new Date(release.created_at).toLocaleString() : '-' }}</td>
+                </tr>
+                <tr v-if="releases.length === 0">
+                  <td colspan="6" class="empty">No releases yet for this native bundle ID.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="console-table-card shared-apps-card">
+          <header>
+            <h2>Shared apps</h2>
+            <Users :size="18" />
+          </header>
+          <p class="empty-state">Shared release access will appear here when another organization grants access to one of your users.</p>
+        </section>
       </template>
     </section>
   </main>
