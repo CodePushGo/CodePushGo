@@ -1,0 +1,8 @@
+name = "codepushgo-register"
+main = "worker.ts"
+compatibility_date = "2026-06-16"
+
+routes = [
+  { pattern = "codepushgo.com/register*", zone_name = "codepushgo.com" },
+  { pattern = "codepushgo.com/register-assets*", zone_name = "codepushgo.com" }
+]
