@@ -29,6 +29,17 @@ npm run dev
 Start the Worker:
 
 ```sh
+
+## Supabase Registration
+
+The console registration page is served at `/register` and uses Supabase Auth plus `public.plan_intents` to persist the selected plan intent. Apply both migrations in `supabase/migrations` to the Supabase project `umpxowxnwroafuzynvwf`, then configure the deployed console with:
+
+- `VITE_SUPABASE_PROJECT_REF=umpxowxnwroafuzynvwf`
+- `VITE_SUPABASE_URL=https://umpxowxnwroafuzynvwf.supabase.co`
+- `VITE_SUPABASE_ANON_KEY=<project anon key>`
+- `VITE_CONSOLE_URL=https://console.codepushgo.com`
+
+In Supabase Auth URL settings, set the site URL to `https://console.codepushgo.com` and allow `https://console.codepushgo.com/*` as a redirect URL. The Worker keeps using `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `CODEPUSHGO_API_KEY` as secrets; do not expose service-role keys to the dashboard.
 npm run worker:dev
 ```
 
