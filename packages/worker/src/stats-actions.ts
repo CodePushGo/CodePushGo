@@ -1,0 +1,38 @@
+export const ALLOWED_STATS_ACTIONS = [
+  'app_ready',
+  'download_start',
+  'download_complete',
+  'download_fail',
+  'download_manifest_start',
+  'download_manifest_complete',
+  'download_zip_start',
+  'download_zip_complete',
+  'download_manifest_file_fail',
+  'download_manifest_checksum_fail',
+  'download_manifest_brotli_fail',
+  'install_start',
+  'install_complete',
+  'install_fail',
+  'rollback',
+  'backend_refusal',
+  'app_crash',
+  'app_crash_native',
+  'app_anr',
+  'app_killed_low_memory',
+  'app_killed_excessive_resource_usage',
+  'app_initialization_failure',
+  'app_memory_warning',
+  'webview_javascript_error',
+  'webview_unhandled_rejection',
+  'webview_resource_error',
+  'webview_security_policy_violation',
+  'webview_unclean_restart',
+  'webview_render_process_gone',
+  'webview_content_process_terminated',
+  'os_version_changed',
+  'native_app_version_changed',
+] as const
+
+export type AllowedStatsAction = typeof ALLOWED_STATS_ACTIONS[number]
+
+export const allowedStatsActions = new Set<string>(ALLOWED_STATS_ACTIONS)

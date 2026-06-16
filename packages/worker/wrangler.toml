@@ -1,0 +1,8 @@
+name = "codepushgo-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-11"
+
+[vars]
+CODEPUSHGO_ENV = "dev"
+SUPABASE_BUNDLE_BUCKET = "codepushgo-bundles"
+# Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and CODEPUSHGO_API_KEY with wrangler secrets.

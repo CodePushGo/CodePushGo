@@ -1,0 +1,33 @@
+{
+  "name": "@codepushgo/react-native-updater",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MPL-2.0",
+  "description": "React Native updater client for CodePushGo",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@codepushgo/shared": "workspace:*"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.73"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
+  }
+}

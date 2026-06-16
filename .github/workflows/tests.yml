@@ -1,0 +1,51 @@
+name: Run tests
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref_name || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+      - development
+  merge_group:
+    types:
+      - checks_requested
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Show bun version
+        run: bun --version
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Lint
+        run: bun run lint
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Build
+        run: bun run build
+      - name: Test
+        run: bun run test
+      - name: Native contract
+        run: bun run native:contract
+      - name: Parity audit
+        run: bun run parity:audit

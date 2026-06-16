@@ -1,0 +1,11 @@
+node_modules
+dist
+.wrangler
+.turbo
+.DS_Store
+*.log
+coverage
+apps/dashboard/.vite
+codepushgo.config.json
+.playwright-mcp
+supabase/.temp

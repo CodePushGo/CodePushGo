@@ -1,0 +1,25 @@
+{
+  "name": "@codepushgo/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "CLI for CodePushGo React Native updates",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "codepushgo": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@codepushgo/shared": "workspace:*",
+    "commander": "^14.0.2",
+    "fflate": "^0.8.2"
+  }
+}

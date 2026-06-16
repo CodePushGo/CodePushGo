@@ -1,0 +1,21 @@
+{
+  "name": "@codepushgo/worker",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "bunx wrangler dev --config wrangler.toml",
+    "deploy": "bunx wrangler deploy --config wrangler.toml"
+  },
+  "dependencies": {
+    "@codepushgo/shared": "workspace:*",
+    "@supabase/supabase-js": "2.106.2",
+    "hono": "^4.10.7",
+    "zod": "^4.1.13"
+  }
+}

@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest'
+import { buildPreviewDownloadPayload, buildPreviewPayloadResponseHeaders, buildPreviewResponseHeaders } from '../src/preview'
+
+describe('[Capgo parity] preview response headers', () => {
+  it.concurrent('keeps bundle preview responses immutable', () => {
+    const headers = buildPreviewResponseHeaders('text/html', {
+      httpEtag: '"bundle-etag"',
+    })
+
+    expect(headers.get('content-type')).toBe('text/html')
+    expect(headers.get('x-content-type-options')).toBe('nosniff')
+    expect(headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+    expect(headers.get('etag')).toBe('"bundle-etag"')
+    expect(headers.get('pragma')).toBeNull()
+    expect(headers.get('expires')).toBeNull()
+  })
+
+  it.concurrent('disables caching for channel preview responses', () => {
+    const headers = buildPreviewResponseHeaders('text/html', {
+      disableCache: true,
+      httpEtag: '"channel-etag"',
+    })
+
+    expect(headers.get('content-type')).toBe('text/html')
+    expect(headers.get('x-content-type-options')).toBe('nosniff')
+    expect(headers.get('cache-control')).toBe('no-store, no-cache, must-revalidate, max-age=0')
+    expect(headers.get('etag')).toBeNull()
+    expect(headers.get('pragma')).toBe('no-cache')
+    expect(headers.get('expires')).toBe('0')
+  })
+
+  it.concurrent('builds no-cache CORS headers for preview payload JSON', () => {
+    const headers = buildPreviewPayloadResponseHeaders()
+
+    expect(headers.get('content-type')).toBe('application/json')
+    expect(headers.get('cache-control')).toBe('no-store, no-cache, must-revalidate, max-age=0')
+    expect(headers.get('access-control-allow-origin')).toBe('*')
+  })
+
+  it.concurrent('builds a direct updater payload from an external bundle URL', async () => {
+    await expect(buildPreviewDownloadPayload({}, 'com.example.app', {
+      checksum: 'abc123',
+      external_url: 'https://example.com/app.zip',
+      id: 42,
+      manifest_count: 3,
+      name: '1.0.0',
+      r2_path: null,
+      session_key: null,
+    })).resolves.toEqual({
+      appId: 'com.example.app',
+      checksum: 'abc123',
+      sessionKey: undefined,
+      url: 'https://example.com/app.zip',
+      version: '1.0.0',
+    })
+  })
+})

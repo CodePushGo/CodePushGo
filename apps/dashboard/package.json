@@ -1,0 +1,21 @@
+{
+  "name": "@codepushgo/dashboard",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@codepushgo/shared": "workspace:*",
+    "lucide-vue-next": "^0.561.0",
+    "vue": "^3.5.25"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.2.6",
+    "vue-tsc": "^3.1.8"
+  }
+}

@@ -1,0 +1,197 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
+
+const mockEq = vi.fn()
+const mockDelete = vi.fn(() => ({ eq: mockEq }))
+const mockFrom = vi.fn(() => ({ delete: mockDelete }))
+const mockRpc = vi.fn()
+const mockIsPlatformAdmin = vi.fn(async () => false)
+const mockCreateSignedImageUrl = vi.fn()
+const mockResolveImagePath = vi.fn((raw?: string | null) => {
+  const normalized = raw?.trim().replace(/^\/+/, '').replace(/^images\//, '') ?? ''
+  return {
+    normalized,
+    shouldSign: Boolean(normalized) && !/^https?:\/\//i.test(normalized),
+  }
+})
+const mockUpdateDashboard = vi.fn()
+const mainStore = {
+  auth: { id: 'auth-user-123' } as { id: string } | undefined,
+  user: { id: 'user-123' } as { id: string } | undefined,
+  isAdmin: false,
+  updateDashboard: mockUpdateDashboard,
+}
+
+vi.mock('../services/supabase', () => ({
+  isPlatformAdmin: mockIsPlatformAdmin,
+  stripeEnabled: ref(true),
+  useSupabase: () => ({
+    auth: {
+      onAuthStateChange: vi.fn(() => ({
+        data: {
+          subscription: {
+            unsubscribe: vi.fn(),
+          },
+        },
+      })),
+    },
+    from: mockFrom,
+    rpc: mockRpc,
+  }),
+}))
+
+vi.mock('../services/storage', () => ({
+  createSignedImageUrl: mockCreateSignedImageUrl,
+  getImmediateImageUrl: (value?: string | null) => {
+    const { normalized, shouldSign } = mockResolveImagePath(value)
+    return shouldSign ? '' : normalized
+  },
+  resolveImagePath: mockResolveImagePath,
+}))
+
+vi.mock('./main', () => ({
+  useMainStore: () => mainStore,
+}))
+
+async function freshStore() {
+  vi.resetModules()
+  const { useOrganizationStore } = await import('./organization')
+  return useOrganizationStore()
+}
+
+describe('organization store deleteOrganization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mainStore.auth = { id: 'auth-user-123' }
+    mainStore.user = { id: 'user-123' }
+    mainStore.isAdmin = false
+    mockEq.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('allows org deletion for org_super_admin roles', async () => {
+    const store = await freshStore()
+    const orgId = 'org-rbac-super-admin'
+
+    store.getAllOrgs().set(orgId, {
+      gid: orgId,
+      role: 'org_super_admin',
+      use_new_rbac: true,
+    })
+
+    const result = await store.deleteOrganization(orgId)
+
+    expect(result.error).toBeNull()
+    expect(mockFrom).toHaveBeenCalledWith('orgs')
+    expect(mockEq).toHaveBeenCalledWith('id', orgId)
+  })
+
+  it('rejects org deletion for lower org roles', async () => {
+    const store = await freshStore()
+    const orgId = 'org-admin-only'
+
+    store.getAllOrgs().set(orgId, {
+      gid: orgId,
+      role: 'org_admin',
+      use_new_rbac: true,
+    })
+
+    const result = await store.deleteOrganization(orgId)
+
+    expect(result.error).toBeInstanceOf(Error)
+    expect(result.error?.message).toBe('Insufficient permissions')
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+})
+
+describe('organization role helpers', () => {
+  it('treats RBAC org roles as their legacy equivalents', async () => {
+    vi.resetModules()
+    const { isAdminRole, isSuperAdminRole, roleHasLegacyMinRight } = await import('./organization')
+
+    expect(isAdminRole('admin')).toBe(true)
+    expect(isAdminRole('org_admin')).toBe(true)
+    expect(isAdminRole('org_super_admin')).toBe(true)
+    expect(isAdminRole('org_member')).toBe(false)
+
+    expect(isSuperAdminRole('super_admin')).toBe(true)
+    expect(isSuperAdminRole('org_super_admin')).toBe(true)
+    expect(isSuperAdminRole('owner')).toBe(true)
+    expect(isSuperAdminRole('org_admin')).toBe(false)
+
+    expect(roleHasLegacyMinRight('invite_org_super_admin', 'super_admin')).toBe(true)
+    expect(roleHasLegacyMinRight('invite_org_admin', 'admin')).toBe(true)
+    expect(roleHasLegacyMinRight('org_billing_admin', 'admin')).toBe(false)
+  })
+})
+
+describe('organization store refreshOrganizationLogos', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mainStore.auth = { id: 'auth-user-123' }
+    mainStore.user = { id: 'user-123' }
+    mockEq.mockResolvedValue({ data: null, error: null })
+  })
+
+  it('updates the current org logo without retriggering the dashboard refresh watcher', async () => {
+    mockCreateSignedImageUrl.mockResolvedValueOnce('https://signed.example.com/org-logo.png')
+    const store = await freshStore()
+    const currentOrganization = {
+      gid: 'org-refresh',
+      created_by: 'owner-123',
+      role: 'org_super_admin',
+      logo: 'https://signed.example.com/old-org-logo.png',
+      logo_storage_path: 'org/org-refresh/logo/current.png',
+      name: 'Refresh Org',
+      password_policy_config: null,
+      enforcing_2fa: false,
+      '2fa_has_access': true,
+      password_has_access: true,
+      paying: true,
+      trial_left: 0,
+      can_use_more: true,
+    }
+
+    store.getAllOrgs().set(currentOrganization.gid, { ...currentOrganization })
+    store.currentOrganization = currentOrganization
+    mockUpdateDashboard.mockClear()
+
+    const currentOrganizationRef = store.currentOrganization
+    await store.refreshOrganizationLogos()
+
+    expect(store.currentOrganization).toBe(currentOrganizationRef)
+    expect(store.currentOrganization?.logo).toBe('https://signed.example.com/org-logo.png')
+    expect(store.currentOrganization?.logo_storage_path).toBe('org/org-refresh/logo/current.png')
+    expect(mockUpdateDashboard).not.toHaveBeenCalled()
+  })
+
+  it('fetches organizations with the auth session when the public profile is unavailable', async () => {
+    mainStore.user = undefined
+    mockCreateSignedImageUrl.mockResolvedValueOnce('')
+    mockRpc.mockResolvedValueOnce({
+      data: [{
+        gid: 'org-auth-fallback',
+        role: 'org_super_admin',
+        app_count: 0,
+        created_by: 'owner-123',
+        name: 'Auth Fallback Org',
+        logo: null,
+        password_policy_config: null,
+        enforcing_2fa: false,
+        '2fa_has_access': true,
+        password_has_access: true,
+        paying: true,
+        trial_left: 0,
+        can_use_more: true,
+      }],
+      error: null,
+    })
+
+    const store = await freshStore()
+
+    await store.fetchOrganizations()
+
+    expect(mockRpc).toHaveBeenCalledWith('get_orgs_v7')
+    expect(store.organizations).toHaveLength(1)
+    expect(store.currentOrganization?.gid).toBe('org-auth-fallback')
+  })
+})
