@@ -14,25 +14,27 @@ This repo contains:
 ## Local Development
 
 ```sh
-npm install
-npm run typecheck
-npm run test
-npm run build
+bun install
+bun run typecheck
+bun run test
+bun run build
 ```
 
 Start the dashboard:
 
 ```sh
-npm run dev
+bun dev
 ```
 
 Start the Worker:
 
 ```sh
+bun run worker:dev
+```
 
 ## Supabase Registration
 
-The console registration page is served at `/register` and uses Supabase Auth plus `public.plan_intents` to persist the selected plan intent. Apply both migrations in `supabase/migrations` to the Supabase project `umpxowxnwroafuzynvwf`, then configure the deployed console with:
+The registration page uses Supabase Auth plus `public.plan_intents` to persist the selected plan intent later in onboarding. Apply both migrations in `supabase/migrations` to the Supabase project `umpxowxnwroafuzynvwf`, then configure builds with:
 
 - `VITE_SUPABASE_PROJECT_REF=umpxowxnwroafuzynvwf`
 - `VITE_SUPABASE_URL=https://umpxowxnwroafuzynvwf.supabase.co`
@@ -40,10 +42,19 @@ The console registration page is served at `/register` and uses Supabase Auth pl
 - `VITE_CONSOLE_URL=https://console.codepushgo.com`
 
 In Supabase Auth URL settings, set the site URL to `https://console.codepushgo.com` and allow `https://console.codepushgo.com/*` as a redirect URL. The Worker keeps using `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `CODEPUSHGO_API_KEY` as secrets; do not expose service-role keys to the dashboard.
-npm run worker:dev
-```
 
-## Backend Schema
+## GitHub Auto Deploy
+
+`main` pushes run `.github/workflows/deploy_worker.yml`, which verifies the repo and deploys the API Worker, console Worker assets, and register route Worker. Required repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `VITE_SUPABASE_ANON_KEY`
+
+Runtime Worker secrets still need to be set in Cloudflare with Wrangler:
+
+- `CODEPUSHGO_API_KEY`
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` when using Supabase storage
 
 For Supabase-backed deployments, apply the single migration in `supabase/migrations/20260611111318_codepushgo_init.sql`. Default Cloudflare deployments use D1 for metadata, R2 for bundles, and `CODEPUSHGO_API_KEY` as a Worker secret/var.
 

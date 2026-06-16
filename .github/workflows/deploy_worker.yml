@@ -1,17 +1,29 @@
-name: Deploy Worker
+name: Deploy Platform
+
+concurrency:
+  group: deploy-platform-${{ github.ref }}
+  cancel-in-progress: false
 
 on:
+  workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "codepushgo-[0-9]*"
-  workflow_dispatch:
 
 permissions: {}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  VITE_SUPABASE_PROJECT_REF: umpxowxnwroafuzynvwf
+  VITE_SUPABASE_URL: https://umpxowxnwroafuzynvwf.supabase.co
+  VITE_CONSOLE_URL: https://console.codepushgo.com
+
 jobs:
-  deploy:
+  test-build-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -27,10 +39,32 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Lint
+        run: bun run lint
+      - name: Typecheck
+        run: bun run typecheck
+      - name: Test
+        run: bun run test
+      - name: Native contract
+        run: bun run native:contract
+      - name: Parity audit
+        run: bun run parity:audit
       - name: Build
         run: bun run build
-      - name: Deploy Worker
+        env:
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - name: Deploy API Worker
         run: bun run worker:deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy console Worker assets
+        run: bunx wrangler deploy --config apps/dashboard/wrangler.toml
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy website register route Worker
+        run: bunx wrangler deploy --config apps/register-route/wrangler.toml
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
