@@ -1,200 +1,173 @@
 <script setup lang="ts">
-import type { AppRecord, Platform, ReleaseRecord } from '@codepushgo/shared'
+import type { User } from '@supabase/supabase-js'
 import { computed, onMounted, ref, watch } from 'vue'
-import { CheckCircle2, Link2, RefreshCw, UploadCloud } from 'lucide-vue-next'
+import { ArrowRight, CheckCircle2, Copy, Loader2, LogOut, RefreshCw, Rocket, Settings, Smartphone, UploadCloud } from 'lucide-vue-next'
+import {
+  createDashboardClient,
+  getCurrentSession,
+  getCurrentUser,
+  listAppReleases,
+  listUserApps,
+  normalizeBillingPeriod,
+  normalizePlan,
+  recordPlanIntent,
+  type ConsoleAppRecord,
+  type ConsoleReleaseRecord,
+} from '../services/registration'
 
-interface AppsResponse {
-  apps: AppRecord[]
-}
-
-interface ReleasesResponse {
-  releases: ReleaseRecord[]
-}
-
-const params = new URLSearchParams(window.location.search)
-const apiUrl = ref(import.meta.env.VITE_API_URL || 'http://localhost:8787')
-const apiKey = ref(import.meta.env.VITE_API_KEY || '')
-const bundleId = ref(params.get('bundleId') || params.get('bundle_id') || params.get('app_id') || localStorage.getItem('codepushgo:bundleId') || '')
-const apps = ref<AppRecord[]>([])
-const releases = ref<ReleaseRecord[]>([])
-const selectedAppId = ref(bundleId.value)
+const client = createDashboardClient()
+const user = ref<User | null>(null)
+const apps = ref<ConsoleAppRecord[]>([])
+const releases = ref<ConsoleReleaseRecord[]>([])
+const selectedAppId = ref('')
+const loading = ref(true)
 const pending = ref(false)
+const error = ref('')
 const notice = ref('')
+const copiedCommand = ref('')
+const selectedPlan = ref(normalizePlan(new URLSearchParams(window.location.search).get('plan')))
+const selectedBilling = ref(normalizeBillingPeriod(new URLSearchParams(window.location.search).get('billing') || new URLSearchParams(window.location.search).get('interval')))
+const planRecorded = ref(false)
 
-const appName = ref('')
-const releaseVersion = ref('')
-const releasePlatform = ref<Platform>('ios')
-const releaseChannel = ref('production')
-const releaseRollout = ref(100)
-const releaseMandatory = ref(false)
-const releaseNotes = ref('')
-const releaseFile = ref<File | undefined>()
-
-const selectedApp = computed(() => apps.value.find((app) => app.appId === selectedAppId.value))
-const activeBundleId = computed(() => bundleId.value.trim() || selectedAppId.value)
-
-watch(bundleId, (value) => {
-  localStorage.setItem('codepushgo:bundleId', value.trim())
+const selectedApp = computed(() => apps.value.find(app => app.app_id === selectedAppId.value))
+const hasApps = computed(() => apps.value.length > 0)
+const displayName = computed(() => {
+  const metadata = user.value?.user_metadata || {}
+  const name = [metadata.first_name, metadata.last_name].filter(Boolean).join(' ')
+  return name || user.value?.email || 'Developer'
 })
+const firstName = computed(() => String(user.value?.user_metadata?.first_name || ''))
+const lastName = computed(() => String(user.value?.user_metadata?.last_name || ''))
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  if (!apiKey.value)
-    throw new Error('API token is required')
+const onboardingCommands = computed(() => [
+  {
+    title: 'Log in to the CLI',
+    command: 'npx @codepushgo/cli@latest login',
+    subtitle: 'Use the API key from this console when key creation is enabled.',
+  },
+  {
+    title: 'Add your React Native app',
+    command: 'npx @codepushgo/cli@latest init',
+    subtitle: 'The CLI should detect the native bundle ID from ios and android projects.',
+  },
+  {
+    title: 'Install the updater client',
+    command: 'npm install @codepushgo/react-native-updater',
+    subtitle: 'Native build support is intentionally out of scope for this first console.',
+  },
+  {
+    title: 'Bundle and upload',
+    command: 'npx @codepushgo/cli@latest bundle --platform ios && npx @codepushgo/cli@latest upload',
+    subtitle: 'Upload JavaScript bundles through the Cloudflare Worker backend.',
+  },
+])
 
-  const base = apiUrl.value.replace(/\/+$/, '')
-  const headers = new Headers(init.headers)
-  headers.set('authorization', `Bearer ${apiKey.value}`)
-
-  const response = await fetch(`${base}${path}`, { ...init, headers })
-  const body = await response.json().catch(() => undefined)
-  if (!response.ok) {
-    const message = body && typeof body === 'object' && 'message' in body ? String(body.message) : response.statusText
-    throw new Error(message || `Request failed with status ${response.status}`)
+async function requireSession() {
+  if (!client) {
+    error.value = 'Supabase public config is missing.'
+    loading.value = false
+    return false
   }
-  return body as T
+
+  const session = await getCurrentSession(client)
+  if (!session) {
+    window.location.replace('/login')
+    return false
+  }
+
+  user.value = await getCurrentUser(client)
+  return true
 }
 
-async function run(label: string, action: () => Promise<void>) {
+async function refresh() {
+  if (!client)
+    return
+
   pending.value = true
+  error.value = ''
+  try {
+    apps.value = await listUserApps(client)
+    if (!selectedAppId.value || !apps.value.some(app => app.app_id === selectedAppId.value))
+      selectedAppId.value = apps.value[0]?.app_id || ''
+    await refreshReleases()
+  }
+  catch (refreshError) {
+    error.value = refreshError instanceof Error ? refreshError.message : String(refreshError)
+  }
+  finally {
+    pending.value = false
+    loading.value = false
+  }
+}
+
+async function refreshReleases() {
+  if (!client || !selectedAppId.value) {
+    releases.value = []
+    return
+  }
+  releases.value = await listAppReleases(client, selectedAppId.value)
+}
+
+async function copyCommand(command: string) {
+  await navigator.clipboard.writeText(command)
+  copiedCommand.value = command
+  setTimeout(() => {
+    if (copiedCommand.value === command)
+      copiedCommand.value = ''
+  }, 1800)
+}
+
+async function savePlanIntent() {
+  if (!client || !user.value?.email || !user.value)
+    return
+
+  pending.value = true
+  error.value = ''
   notice.value = ''
   try {
-    await action()
-    notice.value = label
+    await recordPlanIntent(client, user.value, {
+      email: user.value.email,
+      firstName: firstName.value,
+      lastName: lastName.value,
+      plan: selectedPlan.value,
+      billingPeriod: selectedBilling.value,
+      source: 'console_onboarding',
+      metadata: {
+        path: window.location.pathname,
+        query: window.location.search,
+      },
+    })
+    planRecorded.value = true
+    notice.value = 'Plan intent saved for onboarding.'
   }
-  catch (error) {
-    notice.value = error instanceof Error ? error.message : String(error)
+  catch (planError) {
+    error.value = planError instanceof Error ? planError.message : String(planError)
   }
   finally {
     pending.value = false
   }
 }
 
-function selectDefaultApp() {
-  const preferred = bundleId.value.trim() || selectedAppId.value
-  const appId = apps.value.some((app) => app.appId === preferred)
-    ? preferred
-    : apps.value[0]?.appId || preferred || ''
-  selectedAppId.value = appId
-  if (!bundleId.value && appId)
-    bundleId.value = appId
-}
-
-async function loadApps() {
-  const body = await request<AppsResponse>('/v1/apps')
-  apps.value = body.apps
-  selectDefaultApp()
-}
-
-async function connectBundleId() {
-  await run('Native bundle id synced', async () => {
-    const appId = activeBundleId.value.trim()
-    if (!appId)
-      throw new Error('Native bundle id is required')
-
-    await request('/v1/apps', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ appId, app_id: appId, bundle_id: appId, name: appName.value.trim() || appId, owner_org: 'default-org' }),
-    })
-    bundleId.value = appId
-    selectedAppId.value = appId
-    await loadApps()
-    selectedAppId.value = appId
-    await loadReleases()
-  })
-}
-
-async function refreshApps() {
-  await run('Apps refreshed', async () => {
-    await loadApps()
-    if (selectedAppId.value)
-      await loadReleases()
-  })
-}
-
-async function loadReleases() {
-  if (!selectedAppId.value) {
-    releases.value = []
+async function signOut() {
+  if (!client)
     return
-  }
-
-  const body = await request<ReleasesResponse>(`/v1/apps/${encodeURIComponent(selectedAppId.value)}/bundles`)
-  releases.value = body.releases
+  await client.auth.signOut()
+  window.location.assign('/login')
 }
 
-async function refreshReleases() {
-  await run('Releases refreshed', loadReleases)
-}
-
-function selectApp(appId: string) {
-  selectedAppId.value = appId
-  bundleId.value = appId
+watch(selectedAppId, () => {
   void refreshReleases()
-}
-
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  releaseFile.value = input.files?.[0]
-}
-
-async function uploadRelease() {
-  await run('Release uploaded', async () => {
-    const appId = activeBundleId.value.trim()
-    if (!appId)
-      throw new Error('Native bundle id is required')
-    if (!releaseVersion.value.trim())
-      throw new Error('Version is required')
-    if (!releaseFile.value)
-      throw new Error('Bundle zip is required')
-
-    if (selectedAppId.value !== appId)
-      await connectBundleId()
-
-    await request(`/v1/apps/${encodeURIComponent(appId)}/bundles`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/zip',
-        'x-codepushgo-version': releaseVersion.value.trim(),
-        'x-codepushgo-platform': releasePlatform.value,
-        'x-codepushgo-channel': releaseChannel.value.trim() || 'production',
-        'x-codepushgo-mandatory': String(releaseMandatory.value),
-        'x-codepushgo-rollout': String(releaseRollout.value),
-        ...(releaseNotes.value.trim() ? { 'x-codepushgo-notes': releaseNotes.value.trim() } : {}),
-      },
-      body: releaseFile.value,
-    })
-
-    releaseVersion.value = ''
-    releaseNotes.value = ''
-    releaseFile.value = undefined
-    selectedAppId.value = appId
-    await loadReleases()
-  })
-}
-
-watch(apiKey, (value) => {
-  if (!value.trim())
-    return
-  if (bundleId.value.trim())
-    void connectBundleId()
-  else
-    void refreshApps()
 })
 
-onMounted(() => {
-  if (!apiKey.value)
-    return
-
-  if (bundleId.value)
-    void connectBundleId()
-  else
-    void refreshApps()
+onMounted(async () => {
+  if (await requireSession())
+    await refresh()
 })
 </script>
 
 <template>
-  <main class="shell">
-    <aside class="sidebar">
+  <main class="console-shell">
+    <aside class="console-sidebar">
       <div class="brand">
         <span class="mark">CG</span>
         <div>
@@ -203,154 +176,195 @@ onMounted(() => {
         </div>
       </div>
 
-      <form class="panel" @submit.prevent="connectBundleId">
-        <label>
-          Worker URL
-          <input v-model="apiUrl" autocomplete="off">
-        </label>
-        <label>
-          API token
-          <input v-model="apiKey" type="password" autocomplete="current-password">
-        </label>
-        <label>
-          Native bundle ID
-          <input v-model="bundleId" placeholder="com.example.app" autocomplete="off">
-        </label>
-        <button class="primary" type="submit" :disabled="pending">
-          <Link2 :size="16" />
-          Sync
-        </button>
-      </form>
+      <nav class="console-nav" aria-label="Console navigation">
+        <a class="active" href="/app/home">
+          <Smartphone :size="16" />
+          Apps
+        </a>
+        <a href="/dashboard/settings/plans">
+          <Settings :size="16" />
+          Plans
+        </a>
+      </nav>
 
-      <section class="panel">
-        <div class="section-head compact">
-          <h2>Apps</h2>
-          <button :disabled="pending" title="Refresh apps" @click="refreshApps">
-            <RefreshCw :size="16" />
-          </button>
-        </div>
-        <div class="stack">
-          <button
-            v-for="app in apps"
-            :key="app.appId"
-            class="app-row"
-            :class="{ active: app.appId === selectedAppId }"
-            @click="selectApp(app.appId)"
-          >
-            <span>{{ app.name }}</span>
-            <small>{{ app.appId }}</small>
-          </button>
-        </div>
+      <section class="panel user-panel">
+        <p class="eyebrow">Signed in</p>
+        <strong>{{ displayName }}</strong>
+        <small>{{ user?.email }}</small>
+        <button type="button" @click="signOut">
+          <LogOut :size="16" />
+          Sign out
+        </button>
       </section>
     </aside>
 
-    <section class="content">
+    <section class="console-content">
       <header class="topbar">
         <div>
-          <p class="eyebrow">{{ activeBundleId || 'Native bundle id missing' }}</p>
-          <h2>{{ selectedApp?.name || 'React Native app' }}</h2>
+          <p class="eyebrow">Console</p>
+          <h2>Apps</h2>
         </div>
-        <p v-if="notice" class="notice">
-          <CheckCircle2 :size="16" />
-          {{ notice }}
-        </p>
+        <button type="button" :disabled="pending || loading" @click="refresh">
+          <RefreshCw :size="16" />
+          Refresh
+        </button>
       </header>
 
-      <section class="grid two">
-        <form class="panel" @submit.prevent="connectBundleId">
-          <h3>Native identity</h3>
-          <label>
-            Native bundle ID
-            <input v-model="bundleId" placeholder="com.example.app" autocomplete="off">
-          </label>
-          <label>
-            Name
-            <input v-model="appName" placeholder="Example App" autocomplete="off">
-          </label>
-          <button class="primary" :disabled="pending">
-            <Link2 :size="16" />
-            Sync bundle id
-          </button>
-        </form>
+      <p v-if="error" class="form-alert error">{{ error }}</p>
+      <p v-if="notice" class="form-alert success">
+        <CheckCircle2 :size="16" />
+        {{ notice }}
+      </p>
 
-        <form class="panel" @submit.prevent="uploadRelease">
-          <h3>Upload release</h3>
-          <div class="form-grid">
-            <label>
-              Version
-              <input v-model="releaseVersion" placeholder="1.0.1" autocomplete="off">
-            </label>
-            <label>
-              Platform
-              <select v-model="releasePlatform">
-                <option value="ios">iOS</option>
-                <option value="android">Android</option>
-              </select>
-            </label>
-            <label>
-              Channel
-              <input v-model="releaseChannel" autocomplete="off">
-            </label>
-            <label>
-              Rollout
-              <input v-model.number="releaseRollout" type="number" min="1" max="100">
-            </label>
+      <section v-if="loading" class="panel loading-panel">
+        <Loader2 :size="24" class="spin" />
+        Loading console
+      </section>
+
+      <template v-else>
+        <section v-if="!hasApps" class="onboarding-view">
+          <div class="onboarding-head">
+            <p class="eyebrow">Start using CodePushGo</p>
+            <h2>Add your first React Native app</h2>
+            <p>Copy the commands in order. The app should connect through the native bundle ID by default, matching the Capgo console flow adapted for React Native.</p>
           </div>
-          <label>
-            Notes
-            <input v-model="releaseNotes" autocomplete="off">
-          </label>
-          <label class="file-input">
-            Bundle zip
-            <input type="file" accept=".zip,application/zip" @change="onFileChange">
-          </label>
-          <label class="check">
-            <input v-model="releaseMandatory" type="checkbox">
-            Mandatory
-          </label>
-          <button class="primary" :disabled="pending || !activeBundleId">
-            <UploadCloud :size="16" />
-            Upload
-          </button>
-        </form>
-      </section>
 
-      <section class="panel releases">
-        <div class="section-head">
-          <h3>Releases</h3>
-          <button :disabled="pending || !selectedAppId" @click="refreshReleases">
-            <RefreshCw :size="16" />
-            Reload
-          </button>
-        </div>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Version</th>
-                <th>Platform</th>
-                <th>Channel</th>
-                <th>Rollout</th>
-                <th>Size</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="release in releases" :key="`${release.appId}-${release.platform}-${release.channel}-${release.version}`">
-                <td>{{ release.version }}</td>
-                <td>{{ release.platform }}</td>
-                <td>{{ release.channel }}</td>
-                <td>{{ release.rollout }}%</td>
-                <td>{{ Math.round(release.size / 1024) }} KB</td>
-                <td>{{ new Date(release.createdAt).toLocaleString() }}</td>
-              </tr>
-              <tr v-if="releases.length === 0">
-                <td colspan="6" class="empty">No releases for this native bundle id.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <div class="onboarding-grid">
+            <article class="panel plan-panel">
+              <p class="eyebrow">Plan intent</p>
+              <h3>Choose after registration</h3>
+              <div class="segmented" aria-label="Billing period">
+                <button :class="{ active: selectedBilling === 'monthly' }" type="button" @click="selectedBilling = 'monthly'">Monthly</button>
+                <button :class="{ active: selectedBilling === 'yearly' }" type="button" @click="selectedBilling = 'yearly'">Yearly</button>
+              </div>
+              <div class="plan-picker compact-plan-picker" aria-label="Plan intent">
+                <button type="button" :class="{ active: selectedPlan === 'trial' }" @click="selectedPlan = 'trial'">
+                  <span>Trial</span>
+                  <small>Start with one app</small>
+                </button>
+                <button type="button" :class="{ active: selectedPlan === 'solo' }" @click="selectedPlan = 'solo'">
+                  <span>Solo</span>
+                  <small>For a production app</small>
+                </button>
+                <button type="button" :class="{ active: selectedPlan === 'team' }" @click="selectedPlan = 'team'">
+                  <span>Team</span>
+                  <small>Shared release workflow</small>
+                </button>
+              </div>
+              <button class="primary" type="button" :disabled="pending || planRecorded" @click="savePlanIntent">
+                <CheckCircle2 :size="16" />
+                {{ planRecorded ? 'Saved' : 'Save plan intent' }}
+              </button>
+            </article>
+
+            <div class="steps-list">
+              <article v-for="(step, index) in onboardingCommands" :key="step.title" class="step-card">
+                <span class="step-index">{{ index + 1 }}</span>
+                <div>
+                  <h3>{{ step.title }}</h3>
+                  <button class="command" type="button" @click="copyCommand(step.command)">
+                    <code>{{ step.command }}</code>
+                    <Copy :size="16" />
+                  </button>
+                  <p>{{ copiedCommand === step.command ? 'Copied' : step.subtitle }}</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <template v-else>
+          <section class="apps-layout">
+            <aside class="panel apps-panel">
+              <div class="section-head compact">
+                <h3>Your apps</h3>
+                <span>{{ apps.length }}</span>
+              </div>
+              <div class="stack">
+                <button
+                  v-for="app in apps"
+                  :key="app.app_id"
+                  class="app-row"
+                  :class="{ active: app.app_id === selectedAppId }"
+                  type="button"
+                  @click="selectedAppId = app.app_id"
+                >
+                  <span>{{ app.name }}</span>
+                  <small>{{ app.app_id }}</small>
+                </button>
+              </div>
+            </aside>
+
+            <section class="panel releases">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">{{ selectedApp?.app_id }}</p>
+                  <h3>{{ selectedApp?.name || 'React Native app' }}</h3>
+                </div>
+                <button type="button" :disabled="pending || !selectedAppId" @click="refreshReleases">
+                  <RefreshCw :size="16" />
+                  Reload
+                </button>
+              </div>
+
+              <div class="metrics-strip">
+                <div>
+                  <strong>{{ releases.length }}</strong>
+                  <span>recent releases</span>
+                </div>
+                <div>
+                  <strong>{{ releases[0]?.channel || 'production' }}</strong>
+                  <span>latest channel</span>
+                </div>
+                <div>
+                  <strong>{{ releases[0]?.version || '-' }}</strong>
+                  <span>latest version</span>
+                </div>
+              </div>
+
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Version</th>
+                      <th>Platform</th>
+                      <th>Channel</th>
+                      <th>Rollout</th>
+                      <th>Size</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="release in releases" :key="`${release.app_id}-${release.platform}-${release.channel}-${release.version}`">
+                      <td>{{ release.version }}</td>
+                      <td>{{ release.platform }}</td>
+                      <td>{{ release.channel }}</td>
+                      <td>{{ release.rollout ?? 100 }}%</td>
+                      <td>{{ release.size ? `${Math.round(release.size / 1024)} KB` : '-' }}</td>
+                      <td>{{ release.created_at ? new Date(release.created_at).toLocaleString() : '-' }}</td>
+                    </tr>
+                    <tr v-if="releases.length === 0">
+                      <td colspan="6" class="empty">No releases yet for this native bundle ID.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel upload-note">
+            <Rocket :size="20" />
+            <div>
+              <h3>Upload from the CLI</h3>
+              <p>Bundle uploads stay in the CLI/Worker path. The console reads the resulting apps and releases from Supabase like Capgo, adapted for React Native.</p>
+            </div>
+            <button type="button" @click="copyCommand('npx @codepushgo/cli@latest upload')">
+              <UploadCloud :size="16" />
+              Copy upload command
+            </button>
+          </section>
+        </template>
+      </template>
     </section>
   </main>
 </template>

@@ -1,6 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-
-export const planIntentStorageKey = 'codepushgo:plan-intent'
+import { createClient, type Session, type SupabaseClient, type User } from '@supabase/supabase-js'
 
 export interface RegistrationConfig {
   supabaseUrl: string
@@ -9,32 +7,48 @@ export interface RegistrationConfig {
   enabled: boolean
 }
 
-export interface PlanIntent {
-  plan: string
-  billingPeriod: 'monthly' | 'yearly'
-  priceId: string | null
-  source: string
-}
-
 export interface SignupInput {
   email: string
   password: string
   firstName: string
   lastName: string
-  intent: PlanIntent
   captchaToken?: string
 }
 
-export interface PlanIntentPayload {
+export interface LoginInput {
   email: string
-  user_id: string | null
+  password: string
+}
+
+export interface PlanIntentInput {
+  email: string
+  firstName?: string
+  lastName?: string
   plan: string
-  billing_period: string
-  price_id: string | null
-  source: string
-  first_name: string
-  last_name: string
-  metadata: Record<string, unknown>
+  billingPeriod: 'monthly' | 'yearly'
+  priceId?: string
+  source?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface ConsoleAppRecord {
+  app_id: string
+  name: string
+  owner_org?: string | null
+  created_at?: string
+  need_onboarding?: boolean
+}
+
+export interface ConsoleReleaseRecord {
+  app_id: string
+  version: string
+  platform: 'ios' | 'android'
+  channel: string
+  size?: number | null
+  mandatory?: boolean | null
+  rollout?: number | null
+  notes?: string | null
+  created_at?: string
 }
 
 interface SupabaseEnv {
@@ -43,8 +57,6 @@ interface SupabaseEnv {
   VITE_SUPABASE_PROJECT_REF?: string
   VITE_CONSOLE_URL?: string
 }
-
-const allowedBillingPeriods = new Set(['monthly', 'yearly'])
 
 export function getRegistrationConfig(env: Partial<SupabaseEnv> = import.meta.env as Partial<SupabaseEnv>): RegistrationConfig {
   const projectRef = env.VITE_SUPABASE_PROJECT_REF || 'umpxowxnwroafuzynvwf'
@@ -65,77 +77,15 @@ export function createRegistrationClient(config = getRegistrationConfig()) {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl: true,
     },
   })
 }
 
-export function normalizePlanIntent(params: URLSearchParams, fallback?: PlanIntent | null): PlanIntent {
-  const plan = params.get('plan') || params.get('product') || fallback?.plan || 'trial'
-  const billing = params.get('billing') || params.get('interval') || fallback?.billingPeriod || 'monthly'
-  return {
-    plan: plan.trim().toLowerCase() || 'trial',
-    billingPeriod: allowedBillingPeriods.has(billing) ? billing as 'monthly' | 'yearly' : 'monthly',
-    priceId: params.get('price_id') || params.get('priceId') || fallback?.priceId || null,
-    source: params.get('source') || fallback?.source || 'register',
-  }
-}
+export const createDashboardClient = createRegistrationClient
 
-export function readStoredPlanIntent(storage: Storage = window.localStorage): PlanIntent | null {
-  try {
-    const raw = storage.getItem(planIntentStorageKey)
-    if (!raw)
-      return null
-    const parsed = JSON.parse(raw) as Partial<PlanIntent>
-    if (!parsed.plan)
-      return null
-    return normalizePlanIntent(new URLSearchParams({
-      plan: parsed.plan,
-      billing: parsed.billingPeriod || 'monthly',
-      ...(parsed.priceId ? { price_id: parsed.priceId } : {}),
-      source: parsed.source || 'register',
-    }))
-  }
-  catch {
-    return null
-  }
-}
-
-export function persistPlanIntent(intent: PlanIntent, storage: Storage = window.localStorage) {
-  storage.setItem(planIntentStorageKey, JSON.stringify(intent))
-}
-
-export function buildPlanIntentPayload(input: SignupInput, userId: string | null): PlanIntentPayload {
-  return {
-    email: input.email.trim().toLowerCase(),
-    user_id: userId,
-    plan: input.intent.plan,
-    billing_period: input.intent.billingPeriod,
-    price_id: input.intent.priceId,
-    source: input.intent.source,
-    first_name: input.firstName.trim(),
-    last_name: input.lastName.trim(),
-    metadata: {
-      path: window.location.pathname,
-      query: window.location.search,
-      referrer: document.referrer || null,
-    },
-  }
-}
-
-export async function recordPlanIntent(client: SupabaseClient, payload: PlanIntentPayload) {
-  const { data, error } = await client
-    .from('plan_intents')
-    .insert(payload)
-    .select('id')
-    .maybeSingle()
-
-  if (error)
-    throw error
-  return data?.id as string | undefined
-}
-
-export async function registerWithPlanIntent(client: SupabaseClient, input: SignupInput) {
+export async function registerAccount(client: SupabaseClient, input: SignupInput) {
+  const config = getRegistrationConfig()
   const { data, error } = await client.auth.signUp({
     email: input.email.trim().toLowerCase(),
     password: input.password,
@@ -145,13 +95,94 @@ export async function registerWithPlanIntent(client: SupabaseClient, input: Sign
         first_name: input.firstName.trim(),
         last_name: input.lastName.trim(),
       },
+      emailRedirectTo: `${config.consoleUrl.replace(/\/+$/, '')}/onboarding/verify_email`,
     },
   })
 
   if (error)
     throw error
 
-  const sessionUserId = data.session?.user.id ?? null
-  const intentId = await recordPlanIntent(client, buildPlanIntentPayload(input, sessionUserId))
-  return { ...data, intentId }
+  return data
+}
+
+export async function loginAccount(client: SupabaseClient, input: LoginInput) {
+  const { data, error } = await client.auth.signInWithPassword({
+    email: input.email.trim().toLowerCase(),
+    password: input.password,
+  })
+  if (error)
+    throw error
+  return data
+}
+
+export async function getCurrentSession(client: SupabaseClient): Promise<Session | null> {
+  const { data, error } = await client.auth.getSession()
+  if (error)
+    throw error
+  return data.session
+}
+
+export async function getCurrentUser(client: SupabaseClient): Promise<User | null> {
+  const { data, error } = await client.auth.getUser()
+  if (error)
+    throw error
+  return data.user
+}
+
+export async function listUserApps(client: SupabaseClient): Promise<ConsoleAppRecord[]> {
+  const { data, error } = await client
+    .from('apps')
+    .select('app_id,name,owner_org,created_at,need_onboarding')
+    .order('created_at', { ascending: false })
+
+  if (error)
+    throw error
+
+  return (data ?? []) as ConsoleAppRecord[]
+}
+
+export async function listAppReleases(client: SupabaseClient, appId: string): Promise<ConsoleReleaseRecord[]> {
+  const { data, error } = await client
+    .from('releases')
+    .select('app_id,version,platform,channel,size,mandatory,rollout,notes,created_at')
+    .eq('app_id', appId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  if (error)
+    throw error
+
+  return (data ?? []) as ConsoleReleaseRecord[]
+}
+
+export function normalizePlan(value: string | null | undefined) {
+  const plan = (value || 'trial').trim().toLowerCase()
+  return /^[a-z0-9_-]+$/.test(plan) ? plan : 'trial'
+}
+
+export function normalizeBillingPeriod(value: string | null | undefined): 'monthly' | 'yearly' {
+  return value === 'yearly' || value === 'y' ? 'yearly' : 'monthly'
+}
+
+export async function recordPlanIntent(client: SupabaseClient, user: User, input: PlanIntentInput) {
+  const { data, error } = await client
+    .from('plan_intents')
+    .insert({
+      user_id: user.id,
+      email: input.email.trim().toLowerCase(),
+      first_name: input.firstName?.trim() || null,
+      last_name: input.lastName?.trim() || null,
+      plan: normalizePlan(input.plan),
+      billing_period: input.billingPeriod,
+      price_id: input.priceId?.trim() || null,
+      source: input.source || 'console_onboarding',
+      metadata: input.metadata ?? {},
+    })
+    .select('id')
+    .single()
+
+  if (error)
+    throw error
+
+  return data
 }

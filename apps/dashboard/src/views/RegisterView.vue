@@ -1,20 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { ArrowRight, CheckCircle2, Loader2, RadioTower, ShieldCheck, Zap } from 'lucide-vue-next'
-import {
-  createRegistrationClient,
-  getRegistrationConfig,
-  normalizePlanIntent,
-  persistPlanIntent,
-  readStoredPlanIntent,
-  registerWithPlanIntent,
-} from '../services/registration'
+import { ref } from 'vue'
+import { ArrowRight, CheckCircle2, Loader2, Mail, ShieldCheck, Terminal, Zap } from 'lucide-vue-next'
+import { createRegistrationClient, getRegistrationConfig, registerAccount } from '../services/registration'
 
-const params = new URLSearchParams(window.location.search)
 const config = getRegistrationConfig()
 const client = createRegistrationClient(config)
-const intent = ref(normalizePlanIntent(params, readStoredPlanIntent()))
-persistPlanIntent(intent.value)
+const params = new URLSearchParams(window.location.search)
 
 const email = ref(params.get('email') || '')
 const firstName = ref('')
@@ -23,19 +14,6 @@ const password = ref('')
 const pending = ref(false)
 const message = ref('')
 const error = ref('')
-
-const selectedPlanLabel = computed(() => `${intent.value.plan} / ${intent.value.billingPeriod}`)
-
-const planOptions = [
-  { plan: 'trial', label: 'Trial', detail: 'Start with React Native OTA updates' },
-  { plan: 'solo', label: 'Solo', detail: 'One developer shipping production apps' },
-  { plan: 'team', label: 'Team', detail: 'Shared release workflow and audit trail' },
-]
-
-function selectPlan(plan: string) {
-  intent.value = { ...intent.value, plan }
-  persistPlanIntent(intent.value)
-}
 
 function validateName(value: string) {
   return /^[\p{L}\s'-]+$/u.test(value.trim())
@@ -64,14 +42,13 @@ async function submit() {
 
   pending.value = true
   try {
-    await registerWithPlanIntent(client, {
+    await registerAccount(client, {
       email: email.value,
       password: password.value,
       firstName: firstName.value,
       lastName: lastName.value,
-      intent: intent.value,
     })
-    message.value = 'Account created. Check your email if confirmation is required.'
+    message.value = 'Account created. Check your email, then sign in to finish onboarding.'
   }
   catch (submitError) {
     error.value = submitError instanceof Error ? submitError.message : String(submitError)
@@ -83,8 +60,8 @@ async function submit() {
 </script>
 
 <template>
-  <main class="register-shell">
-    <section class="register-brand">
+  <main class="auth-shell auth-shell-register">
+    <section class="auth-brand">
       <a class="register-logo" href="/" aria-label="CodePushGo console">
         <span class="mark">CG</span>
         <span>CodePushGo</span>
@@ -92,44 +69,31 @@ async function submit() {
       <div class="register-copy">
         <p class="eyebrow">React Native live updates</p>
         <h1>Sign up to CodePushGo</h1>
-        <p>Ship JavaScript bundle updates through the same console flow your native bundle ID already uses.</p>
+        <p>Ship JavaScript bundle updates with the same app identity your React Native native project already has.</p>
       </div>
       <div class="register-proof">
         <div>
-          <Zap :size="18" />
-          <span>Bundle uploads from CLI</span>
+          <Terminal :size="18" />
+          <span>CLI detects your native bundle ID</span>
         </div>
         <div>
-          <RadioTower :size="18" />
-          <span>Channels and rollout controls</span>
+          <Zap :size="18" />
+          <span>Bundle upload, channels, rollout</span>
         </div>
         <div>
           <ShieldCheck :size="18" />
-          <span>Cloudflare Worker backend</span>
+          <span>Supabase auth and Worker backend</span>
         </div>
       </div>
     </section>
 
-    <section class="register-panel" aria-labelledby="register-title">
+    <section class="auth-panel" aria-labelledby="register-title">
       <div class="register-head">
         <div>
-          <p class="eyebrow">{{ selectedPlanLabel }}</p>
-          <h2 id="register-title">Create account</h2>
+          <p class="eyebrow">Create account</p>
+          <h2 id="register-title">Start with email</h2>
         </div>
-        <a :href="`${config.consoleUrl}/login/`">Sign in</a>
-      </div>
-
-      <div class="plan-picker" aria-label="Plan intent">
-        <button
-          v-for="option in planOptions"
-          :key="option.plan"
-          type="button"
-          :class="{ active: intent.plan === option.plan }"
-          @click="selectPlan(option.plan)"
-        >
-          <span>{{ option.label }}</span>
-          <small>{{ option.detail }}</small>
-        </button>
+        <a href="/login">Sign in</a>
       </div>
 
       <form class="register-form" @submit.prevent="submit">
@@ -162,6 +126,14 @@ async function submit() {
           Sign up
         </button>
       </form>
+
+      <p class="auth-note">
+        Plan selection happens inside console onboarding, after the account exists.
+      </p>
+      <a class="support-link" href="mailto:support@codepushgo.com">
+        <Mail :size="16" />
+        Need help?
+      </a>
     </section>
   </main>
 </template>
