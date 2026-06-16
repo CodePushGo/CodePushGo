@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ArrowRight, CheckCircle2, Loader2, Mail, ShieldCheck, Terminal, Zap } from 'lucide-vue-next'
-import { createRegistrationClient, getRegistrationConfig, registerAccount } from '../services/registration'
+import { createConfirmedAccount, createRegistrationClient, getRegistrationConfig, loginAccount } from '../services/registration'
 
 const config = getRegistrationConfig()
 const client = createRegistrationClient(config)
@@ -42,13 +42,16 @@ async function submit() {
 
   pending.value = true
   try {
-    await registerAccount(client, {
+    const input = {
       email: email.value,
       password: password.value,
       firstName: firstName.value,
       lastName: lastName.value,
-    })
-    message.value = 'Account created. Check your email, then sign in to finish onboarding.'
+    }
+    await createConfirmedAccount(input, config)
+    await loginAccount(client, input)
+    window.location.assign('/app/home')
+    return
   }
   catch (submitError) {
     error.value = submitError instanceof Error ? submitError.message : String(submitError)

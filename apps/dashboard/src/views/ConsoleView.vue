@@ -1,30 +1,13 @@
 <script setup lang="ts">
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { computed, onMounted, ref, watch } from 'vue'
-import {
-  Activity,
-  BarChart3,
-  BookOpen,
-  CheckCircle2,
-  ChevronDown,
-  Copy,
-  Gauge,
-  KeyRound,
-  Layers3,
-  Loader2,
-  LogOut,
-  Menu,
-  PackagePlus,
-  RadioTower,
-  RefreshCw,
-  Rocket,
-  Settings,
-  ShieldCheck,
-  Smartphone,
-  UploadCloud,
-  Users,
-  X,
-} from 'lucide-vue-next'
+import { Activity, CheckCircle2, Copy, KeyRound, Loader2, RadioTower, ShieldCheck, Smartphone, UploadCloud, Users } from 'lucide-vue-next'
+import Navbar from '../components/Navbar.vue'
+import Sidebar from '../components/Sidebar.vue'
+import TopApps from '../components/dashboard/TopApps.vue'
+import Usage from '../components/dashboard/Usage.vue'
+import WelcomeBanner from '../components/dashboard/WelcomeBanner.vue'
+import Steps from '../components/onboarding/Steps.vue'
 import {
   createDashboardClient,
   getCurrentSession,
@@ -119,14 +102,8 @@ const isAppScoped = computed(() => section.value !== 'home' && section.value !==
 const pageTitle = computed(() => {
   if (showOnboarding.value)
     return 'Onboarding'
-  if (section.value === 'home')
-    return 'All apps'
-  if (section.value === 'api-keys')
-    return 'API keys'
-  if (section.value === 'settings')
-    return 'Organization settings'
   const titles: Record<ConsoleSection, string> = {
-    home: 'All apps',
+    home: 'Dashboard',
     overview: 'Overview',
     releases: 'Bundles',
     channels: 'Channels',
@@ -137,6 +114,7 @@ const pageTitle = computed(() => {
   }
   return titles[section.value]
 })
+const pageEyebrow = computed(() => isAppScoped.value ? selectedApp.value?.name || 'App' : 'CodePushGo')
 const displayName = computed(() => {
   const metadata = user.value?.user_metadata || {}
   const name = [metadata.first_name, metadata.last_name].filter(Boolean).join(' ')
@@ -154,16 +132,6 @@ const installCommand = computed(() => 'npm install @codepushgo/react-native-upda
 const initCommand = computed(() => 'npx @codepushgo/cli@latest init')
 const uploadCommand = computed(() => selectedAppId.value ? `npx @codepushgo/cli@latest upload --app-id ${selectedAppId.value}` : 'npx @codepushgo/cli@latest upload')
 const releaseCommand = computed(() => selectedAppId.value ? `npx @codepushgo/cli@latest release --app-id ${selectedAppId.value} --channel production` : 'npx @codepushgo/cli@latest release --channel production')
-const sidebarAppLinks = computed(() => selectedAppId.value
-  ? [
-      { section: 'overview' as const, label: 'Overview', href: `/app/p/${encodeURIComponent(selectedAppId.value)}`, icon: BarChart3 },
-      { section: 'releases' as const, label: 'Bundles', href: `/app/p/${encodeURIComponent(selectedAppId.value)}/bundle`, icon: Layers3 },
-      { section: 'channels' as const, label: 'Channels', href: `/app/p/${encodeURIComponent(selectedAppId.value)}/channels`, icon: RadioTower },
-      { section: 'devices' as const, label: 'Devices', href: `/app/p/${encodeURIComponent(selectedAppId.value)}/devices`, icon: Smartphone },
-      { section: 'stats' as const, label: 'Stats', href: `/app/p/${encodeURIComponent(selectedAppId.value)}/stats`, icon: Gauge },
-    ]
-  : [])
-
 const onboardingCommands = computed(() => [
   {
     title: 'Install the React Native updater',
@@ -358,97 +326,31 @@ onMounted(async () => {
 
 <template>
   <main class="capgo-console-shell">
-    <div class="sidebar-backdrop" :class="{ visible: sidebarOpen }" @click="sidebarOpen = false" />
-
-    <aside class="capgo-sidebar" :class="{ open: sidebarOpen }" aria-label="Console navigation">
-      <div class="sidebar-header">
-        <a class="sidebar-logo" href="/app/home" aria-label="CodePushGo console" @click.prevent="navigate('home')">
-          <span class="mark">CG</span>
-          <span>CodePushGo</span>
-        </a>
-        <button class="sidebar-close" type="button" aria-label="Close sidebar" @click="sidebarOpen = false">
-          <X :size="18" />
-        </button>
-      </div>
-
-      <div class="app-switcher" :class="{ disabled: !hasApps }">
-        <button type="button" :disabled="!hasApps" @click="appMenuOpen = !appMenuOpen">
-          <span class="app-icon">{{ selectedApp?.name?.slice(0, 2).toUpperCase() || 'RN' }}</span>
-          <span>
-            <strong>{{ selectedApp?.name || 'No app yet' }}</strong>
-            <small>{{ selectedApp?.app_id || 'React Native bundle ID' }}</small>
-          </span>
-          <ChevronDown :size="16" />
-        </button>
-        <div v-if="appMenuOpen" class="app-switcher-menu">
-          <button v-for="app in apps" :key="app.app_id" type="button" @click="navigate('overview', app.app_id)">
-            <span class="app-icon">{{ app.name.slice(0, 2).toUpperCase() }}</span>
-            <span>
-              <strong>{{ app.name }}</strong>
-              <small>{{ app.app_id }}</small>
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <div class="nav-group">
-        <p>Console</p>
-        <a href="/app/home" :class="{ active: section === 'home' }" @click.prevent="navigate('home')">
-          <PackagePlus :size="19" />
-          All apps
-        </a>
-        <a v-for="item in sidebarAppLinks" :key="item.section" :href="item.href" :class="{ active: section === item.section }" @click.prevent="navigate(item.section)">
-          <component :is="item.icon" :size="19" />
-          {{ item.label }}
-        </a>
-      </div>
-
-      <div class="nav-group">
-        <p>Organization</p>
-        <a href="/dashboard/apikeys" :class="{ active: section === 'api-keys' }" @click.prevent="navigate('api-keys')">
-          <KeyRound :size="19" />
-          API keys
-        </a>
-        <a href="/dashboard/settings/plans" :class="{ active: section === 'settings' }" @click.prevent="navigate('settings')">
-          <Settings :size="19" />
-          Settings
-        </a>
-        <a href="https://codepushgo.com/docs/" target="_blank" rel="noreferrer">
-          <BookOpen :size="19" />
-          Documentation
-        </a>
-      </div>
-
-      <div class="sidebar-account">
-        <p>Signed in</p>
-        <strong>{{ displayName }}</strong>
-        <small>{{ user?.email }}</small>
-        <button type="button" @click="signOut">
-          <LogOut :size="16" />
-          Sign out
-        </button>
-      </div>
-    </aside>
+    <Sidebar
+      :apps="apps"
+      :current-section="section"
+      :selected-app-id="selectedAppId"
+      :sidebar-open="sidebarOpen"
+      :app-menu-open="appMenuOpen"
+      :display-name="displayName"
+      :email="user?.email"
+      @close-sidebar="sidebarOpen = false"
+      @toggle-app-menu="appMenuOpen = !appMenuOpen"
+      @navigate="navigate"
+      @sign-out="signOut"
+    />
 
     <section class="capgo-console-content">
-      <header class="console-navbar">
-        <button class="menu-button" type="button" aria-label="Open sidebar" @click="sidebarOpen = true">
-          <Menu :size="20" />
-        </button>
-        <div class="breadcrumb">
-          <span>{{ isAppScoped ? selectedApp?.name || 'App' : 'CodePushGo' }}</span>
-          <strong>{{ pageTitle }}</strong>
-        </div>
-        <div class="navbar-spacer" />
-        <button type="button" :disabled="pending || loading" @click="refresh">
-          <RefreshCw :size="16" />
-          Refresh
-        </button>
-        <button class="primary" type="button" @click="copyCommand(uploadCommand)">
-          <UploadCloud :size="16" />
-          Upload
-        </button>
-      </header>
+      <Navbar
+        :sidebar-open="sidebarOpen"
+        :pending="pending"
+        :loading="loading"
+        :title="pageTitle"
+        :eyebrow="pageEyebrow"
+        @toggle-sidebar="sidebarOpen = !sidebarOpen"
+        @refresh="refresh"
+        @upload="copyCommand(uploadCommand)"
+      />
 
       <p v-if="error" class="form-alert error">{{ error }}</p>
       <p v-if="notice" class="form-alert success">
@@ -461,68 +363,29 @@ onMounted(async () => {
         Loading console
       </section>
 
-      <template v-else-if="showOnboarding">
-        <section class="capgo-page-head onboarding-title">
-          <div>
-            <p class="eyebrow">React Native onboarding</p>
-            <h1>Connect your first app with its native bundle ID</h1>
-            <p>CodePushGo uses the same app identity as the React Native native project. Run the CLI in the project and the console will fill with apps, bundles, channels, devices, and stats.</p>
-          </div>
-        </section>
-
-        <section class="steps-layout capgo-page-section">
-          <article class="plan-intent-card">
-            <p class="eyebrow">Plan intent</p>
-            <h2>Choose during onboarding</h2>
-            <div class="segmented" aria-label="Billing period">
-              <button :class="{ active: selectedBilling === 'monthly' }" type="button" @click="selectedBilling = 'monthly'">Monthly</button>
-              <button :class="{ active: selectedBilling === 'yearly' }" type="button" @click="selectedBilling = 'yearly'">Yearly</button>
-            </div>
-            <div class="plan-picker compact-plan-picker" aria-label="Plan intent">
-              <button type="button" :class="{ active: selectedPlan === 'trial' }" @click="selectedPlan = 'trial'">
-                <span>Trial</span>
-                <small>Validate live updates</small>
-              </button>
-              <button type="button" :class="{ active: selectedPlan === 'solo' }" @click="selectedPlan = 'solo'">
-                <span>Solo</span>
-                <small>One production app</small>
-              </button>
-              <button type="button" :class="{ active: selectedPlan === 'team' }" @click="selectedPlan = 'team'">
-                <span>Team</span>
-                <small>Shared release workflow</small>
-              </button>
-            </div>
-            <button class="primary" type="button" :disabled="pending || planRecorded" @click="savePlanIntent">
-              <CheckCircle2 :size="16" />
-              {{ planRecorded ? 'Saved' : 'Save plan intent' }}
-            </button>
-          </article>
-
-          <div class="capgo-steps-list">
-            <article v-for="(item, index) in onboardingCommands" :key="item.title" class="capgo-step">
-              <span class="capgo-step-index">{{ index + 1 }}</span>
-              <div>
-                <h2>{{ item.title }}</h2>
-                <button class="command" type="button" @click="copyCommand(item.command)">
-                  <code>{{ item.command }}</code>
-                  <Copy :size="16" />
-                </button>
-                <p>{{ copiedCommand === item.command ? 'Copied to clipboard' : item.subtitle }}</p>
-              </div>
-            </article>
-          </div>
-        </section>
-      </template>
+      <Steps
+        v-else-if="showOnboarding"
+        :steps="onboardingCommands"
+        :copied-command="copiedCommand"
+        :selected-plan="selectedPlan"
+        :selected-billing="selectedBilling"
+        :pending="pending"
+        :plan-recorded="planRecorded"
+        @copy-command="copyCommand"
+        @save-plan-intent="savePlanIntent"
+        @update-selected-plan="selectedPlan = $event"
+        @update-selected-billing="selectedBilling = $event"
+      />
 
       <template v-else>
-        <section class="capgo-page-head">
+        <section class="dashboard-page-head">
           <div>
             <p class="eyebrow">{{ selectedApp?.app_id || 'Organization' }}</p>
             <h1>{{ pageTitle }}</h1>
             <p v-if="section === 'home'">Manage the React Native apps connected by native bundle ID.</p>
             <p v-else-if="section === 'api-keys'">Use organization API keys with the CLI and Cloudflare Worker endpoints.</p>
             <p v-else-if="section === 'settings'">Billing, plan intent, team access, and organization defaults.</p>
-            <p v-else>Capgo-style release operations adapted to React Native JavaScript bundles.</p>
+            <p v-else>Manage React Native JavaScript bundles, channels, devices, and update stats.</p>
           </div>
           <button class="primary" type="button" @click="copyCommand(section === 'releases' ? uploadCommand : releaseCommand)">
             <Copy :size="16" />
@@ -530,92 +393,63 @@ onMounted(async () => {
           </button>
         </section>
 
-        <section v-if="section === 'home'" class="capgo-page-section apps-overview-layout">
-          <article class="console-table-card apps-card-main">
-            <header>
-              <h2>Apps</h2>
-              <span>{{ apps.length }}</span>
-            </header>
-            <div class="app-list">
-              <button v-for="app in apps" :key="app.app_id" type="button" class="app-list-row" @click="navigate('overview', app.app_id)">
-                <span class="app-icon">{{ app.name.slice(0, 2).toUpperCase() }}</span>
-                <span>
-                  <strong>{{ app.name }}</strong>
-                  <small>{{ app.app_id }}</small>
-                </span>
-                <span>{{ formatDate(app.created_at) }}</span>
+        <section v-if="section === 'home'" class="dashboard-content">
+          <WelcomeBanner :name="firstName || displayName" />
+          <div class="dashboard-home-grid">
+            <TopApps :apps="apps" :selected-app-id="selectedAppId" @open-app="navigate('overview', $event)" />
+            <article class="quickstart-card">
+              <p class="eyebrow">Add app</p>
+              <h2>Let the CLI detect the bundle ID</h2>
+              <button class="command" type="button" @click="copyCommand(initCommand)">
+                <code>{{ initCommand }}</code>
+                <Copy :size="16" />
               </button>
-            </div>
-          </article>
-
-          <article class="quickstart-card">
-            <p class="eyebrow">Add app</p>
-            <h2>Let the CLI detect the bundle ID</h2>
-            <button class="command" type="button" @click="copyCommand(initCommand)">
-              <code>{{ initCommand }}</code>
-              <Copy :size="16" />
-            </button>
-            <p>Do not create a separate CodePushGo identifier. The app id is the React Native native bundle ID.</p>
-          </article>
+              <p>Do not create a separate CodePushGo identifier. The app id is the React Native native bundle ID.</p>
+            </article>
+          </div>
         </section>
 
-        <section v-else-if="section === 'overview'" class="capgo-page-section dashboard-grid">
-          <article class="metric-card usage-card">
-            <div>
-              <p>Devices</p>
-              <strong>{{ monthlyDevices }}</strong>
-              <span>recent active devices</span>
-            </div>
-            <Smartphone :size="24" />
-          </article>
-          <article class="metric-card">
-            <div>
-              <p>Bundles</p>
-              <strong>{{ releases.length }}</strong>
-              <span>{{ releasesByPlatform.ios || 0 }} iOS / {{ releasesByPlatform.android || 0 }} Android</span>
-            </div>
-            <Layers3 :size="24" />
-          </article>
-          <article class="metric-card">
-            <div>
-              <p>Latest</p>
-              <strong>{{ latestRelease?.version || '-' }}</strong>
-              <span>{{ latestRelease?.channel || 'no release yet' }}</span>
-            </div>
-            <Rocket :size="24" />
-          </article>
-        </section>
+        <template v-else-if="section === 'overview'">
+          <Usage
+            :devices="monthlyDevices"
+            :bundles="releases.length"
+            :ios-bundles="releasesByPlatform.ios || 0"
+            :android-bundles="releasesByPlatform.android || 0"
+            :latest-version="latestRelease?.version"
+            :latest-channel="latestRelease?.channel"
+          />
 
-        <section v-if="section === 'overview'" class="capgo-page-section two-column-layout">
-          <article class="console-table-card">
-            <header>
-              <h2>Latest bundles</h2>
-              <button type="button" @click="navigate('releases')">View all</button>
-            </header>
-            <div class="release-feed">
-              <div v-for="release in releases.slice(0, 5)" :key="`${release.app_id}-${release.platform}-${release.channel}-${release.version}`" class="release-feed-row">
-                <span class="status-dot" />
-                <div>
-                  <strong>{{ release.version }}</strong>
-                  <small>{{ release.platform }} / {{ release.channel }} / rollout {{ release.rollout ?? 100 }}%</small>
+          <section class="dashboard-home-grid dashboard-content compact-content">
+            <article class="console-table-card">
+              <header>
+                <h2>Latest bundles</h2>
+                <button type="button" @click="navigate('releases')">View all</button>
+              </header>
+              <div class="release-feed">
+                <div v-for="release in releases.slice(0, 5)" :key="`${release.app_id}-${release.platform}-${release.channel}-${release.version}`" class="release-feed-row">
+                  <span class="status-dot" />
+                  <div>
+                    <strong>{{ release.version }}</strong>
+                    <small>{{ release.platform }} / {{ release.channel }} / rollout {{ release.rollout ?? 100 }}%</small>
+                  </div>
+                  <span>{{ formatDate(release.created_at) }}</span>
                 </div>
-                <span>{{ formatDate(release.created_at) }}</span>
+                <p v-if="releases.length === 0" class="empty-state">No JavaScript bundle uploaded yet.</p>
               </div>
-              <p v-if="releases.length === 0" class="empty-state">No JavaScript bundle uploaded yet.</p>
-            </div>
-          </article>
+            </article>
 
-          <article class="quickstart-card">
-            <p class="eyebrow">Install snippet</p>
-            <h2>Start updates from JavaScript</h2>
-            <pre><code>import { startCodePushGo } from '@codepushgo/react-native-updater'
+            <article class="quickstart-card">
+              <p class="eyebrow">Install snippet</p>
+              <h2>Start updates from JavaScript</h2>
+              <pre><code>import { startCodePushGo } from '@codepushgo/react-native-updater'
 
 startCodePushGo()</code></pre>
-            <p>The updater auto-connects with the native bundle ID exposed by React Native.</p>
-          </article>
-        </section>
+              <p>The updater auto-connects with the native bundle ID exposed by React Native.</p>
+            </article>
+          </section>
+        </template>
 
-        <section v-else-if="section === 'releases'" class="capgo-page-section console-table-card">
+        <section v-else-if="section === 'releases'" class="dashboard-content console-table-card">
           <header>
             <h2>Bundles</h2>
             <button type="button" @click="copyCommand(uploadCommand)"><UploadCloud :size="16" /> Upload command</button>
@@ -649,7 +483,7 @@ startCodePushGo()</code></pre>
           </div>
         </section>
 
-        <section v-else-if="section === 'channels'" class="capgo-page-section console-table-card">
+        <section v-else-if="section === 'channels'" class="dashboard-content console-table-card">
           <header>
             <h2>Channels</h2>
             <RadioTower :size="18" />
@@ -679,7 +513,7 @@ startCodePushGo()</code></pre>
           </div>
         </section>
 
-        <section v-else-if="section === 'devices'" class="capgo-page-section console-table-card">
+        <section v-else-if="section === 'devices'" class="dashboard-content console-table-card">
           <header>
             <h2>Devices</h2>
             <Smartphone :size="18" />
@@ -711,7 +545,7 @@ startCodePushGo()</code></pre>
           </div>
         </section>
 
-        <section v-else-if="section === 'stats'" class="capgo-page-section console-table-card">
+        <section v-else-if="section === 'stats'" class="dashboard-content console-table-card">
           <header>
             <h2>Stats</h2>
             <Activity :size="18" />
@@ -743,7 +577,7 @@ startCodePushGo()</code></pre>
           </div>
         </section>
 
-        <section v-else-if="section === 'api-keys'" class="capgo-page-section two-column-layout">
+        <section v-else-if="section === 'api-keys'" class="dashboard-home-grid dashboard-content compact-content">
           <article class="quickstart-card">
             <p class="eyebrow">CLI authentication</p>
             <h2>Create an organization API key</h2>
@@ -760,7 +594,7 @@ startCodePushGo()</code></pre>
           </article>
         </section>
 
-        <section v-else-if="section === 'settings'" class="capgo-page-section two-column-layout">
+        <section v-else-if="section === 'settings'" class="dashboard-home-grid dashboard-content compact-content">
           <article class="plan-intent-card static-plan-card">
             <p class="eyebrow">Plan intent</p>
             <h2>Record the onboarding choice</h2>

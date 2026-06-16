@@ -20,6 +20,18 @@ describe('CodePushGo worker', () => {
     expect(response.status).toBe(401)
   })
 
+  it('requires Supabase service-role config for public signup', async () => {
+    const { app, env } = testApp()
+    const response = await app.request('https://api.test/auth/signup', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'user@example.com', password: 'password123', first_name: 'Ada', last_name: 'Lovelace' }),
+    }, env)
+
+    expect(response.status).toBe(503)
+    expect(await response.json()).toMatchObject({ error: 'supabase_not_configured' })
+  })
+
   it('uses in-memory storage for local Worker dev without D1/R2 bindings', async () => {
     const app = createWorkerApp()
     const env = { CODEPUSHGO_API_KEY: 'test-token', CODEPUSHGO_ENV: 'dev' } as Env

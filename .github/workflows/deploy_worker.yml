@@ -46,7 +46,7 @@ jobs:
       - name: Build
         run: bun run build
         env:
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO
       - name: Test
         run: bun run test
       - name: Native contract

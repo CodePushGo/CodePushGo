@@ -9,15 +9,41 @@ import {
 
 describe('registration config', () => {
   it('derives the Supabase URL from the CodePushGo project ref', () => {
-    expect(getRegistrationConfig({ VITE_SUPABASE_ANON_KEY: 'anon' })).toMatchObject({
+    expect(getRegistrationConfig({ VITE_SUPABASE_PUBLISHABLE_KEY: 'publishable' })).toMatchObject({
       supabaseUrl: 'https://umpxowxnwroafuzynvwf.supabase.co',
-      supabaseAnonKey: 'anon',
+      supabaseAnonKey: 'publishable',
       enabled: true,
     })
   })
 
-  it('stays disabled until the anon key is provided', () => {
-    expect(getRegistrationConfig({ VITE_SUPABASE_PROJECT_REF: 'abc' }).enabled).toBe(false)
+  it('uses the CodePushGo publishable key by default', () => {
+    expect(getRegistrationConfig({ VITE_SUPABASE_PROJECT_REF: 'abc' }).enabled).toBe(true)
+  })
+})
+
+describe('createConfirmedAccount', () => {
+  it('creates an account through the Worker signup endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'ok' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { createConfirmedAccount } = await import('./registration')
+    await createConfirmedAccount({
+      email: ' User@Example.com ',
+      password: 'password123',
+      firstName: ' Ada ',
+      lastName: ' Lovelace ',
+    }, { supabaseUrl: '', supabaseAnonKey: '', consoleUrl: '', apiUrl: 'https://api.test/', enabled: true })
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.test/auth/signup', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        email: 'user@example.com',
+        password: 'password123',
+        first_name: 'Ada',
+        last_name: 'Lovelace',
+      }),
+    }))
+    vi.unstubAllGlobals()
   })
 })
 
@@ -44,6 +70,19 @@ describe('registerAccount', () => {
       }),
     }))
     expect(signUp.mock.calls[0][0].options.data).not.toHaveProperty('plan')
+  })
+
+  it('returns the Supabase session from signup so the UI can redirect immediately', async () => {
+    const session = { access_token: 'access', refresh_token: 'refresh' }
+    const signUp = vi.fn().mockResolvedValue({ data: { session, user: { id: 'user_123' } }, error: null })
+    const client = { auth: { signUp } }
+
+    await expect(registerAccount(client as any, {
+      email: 'user@example.com',
+      password: 'password123',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+    })).resolves.toMatchObject({ session })
   })
 })
 

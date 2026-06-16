@@ -38,7 +38,7 @@ The registration page uses Supabase Auth plus `public.plan_intents` to persist t
 
 - `VITE_SUPABASE_PROJECT_REF=umpxowxnwroafuzynvwf`
 - `VITE_SUPABASE_URL=https://umpxowxnwroafuzynvwf.supabase.co`
-- `VITE_SUPABASE_ANON_KEY=<project anon key>`
+- `VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO`
 - `VITE_CONSOLE_URL=https://console.codepushgo.com`
 
 In Supabase Auth URL settings, set the site URL to `https://console.codepushgo.com` and allow `https://console.codepushgo.com/*` as a redirect URL. The Worker keeps using `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `CODEPUSHGO_API_KEY` as secrets; do not expose service-role keys to the dashboard.
@@ -49,7 +49,6 @@ In Supabase Auth URL settings, set the site URL to `https://console.codepushgo.c
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
-- `VITE_SUPABASE_ANON_KEY`
 
 Runtime Worker secrets still need to be set in Cloudflare with Wrangler:
 

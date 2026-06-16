@@ -4,6 +4,7 @@ export interface RegistrationConfig {
   supabaseUrl: string
   supabaseAnonKey: string
   consoleUrl: string
+  apiUrl: string
   enabled: boolean
 }
 
@@ -51,21 +52,26 @@ export interface ConsoleReleaseRecord {
   created_at?: string
 }
 
+const CODEPUSHGO_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO'
+
 interface SupabaseEnv {
   VITE_SUPABASE_URL?: string
+  VITE_SUPABASE_PUBLISHABLE_KEY?: string
   VITE_SUPABASE_ANON_KEY?: string
   VITE_SUPABASE_PROJECT_REF?: string
   VITE_CONSOLE_URL?: string
+  VITE_API_URL?: string
 }
 
 export function getRegistrationConfig(env: Partial<SupabaseEnv> = import.meta.env as Partial<SupabaseEnv>): RegistrationConfig {
   const projectRef = env.VITE_SUPABASE_PROJECT_REF || 'umpxowxnwroafuzynvwf'
   const supabaseUrl = env.VITE_SUPABASE_URL || `https://${projectRef}.supabase.co`
-  const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || ''
+  const supabaseAnonKey = env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY || CODEPUSHGO_SUPABASE_PUBLISHABLE_KEY
   return {
     supabaseUrl,
     supabaseAnonKey,
     consoleUrl: env.VITE_CONSOLE_URL || 'https://console.codepushgo.com',
+    apiUrl: env.VITE_API_URL || 'https://api.codepushgo.com',
     enabled: Boolean(supabaseUrl && supabaseAnonKey),
   }
 }
@@ -81,6 +87,23 @@ export function createRegistrationClient(config = getRegistrationConfig()) {
     },
   })
 }
+export async function createConfirmedAccount(input: SignupInput, config = getRegistrationConfig()) {
+  const response = await fetch(`${config.apiUrl.replace(/\/+$/, '')}/auth/signup`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      email: input.email.trim().toLowerCase(),
+      password: input.password,
+      first_name: input.firstName.trim(),
+      last_name: input.lastName.trim(),
+    }),
+  })
+  const data = await response.json().catch(() => ({})) as { message?: string }
+  if (!response.ok)
+    throw new Error(data.message || 'Unable to create account')
+  return data
+}
+
 
 export const createDashboardClient = createRegistrationClient
 

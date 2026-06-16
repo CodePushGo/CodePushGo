@@ -4,6 +4,7 @@ import type { ApiKeyBindingRecord, ApiKeyRecord, AppRecord, AuditLogRecord, Audi
 import { CAPGO_API_VERSION_HEADER, compareNativePackages, compareVersions, isValidAppId, isValidReleaseVersion, isVersionGreater, parseCapgoApiVersion } from '@codepushgo/shared'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { D1R2Storage, MemoryStorage, type Env, type RoleBindingRecord, type RoleBindingScopeType, type StorageDriver, type UpdateApiKeyInput, type WebhookDeliveryRecord, type WebhookRecord } from './storage'
 import { hasSupabaseEnv, SupabaseStorage } from './supabase-storage'
@@ -693,6 +694,19 @@ const validatePasswordComplianceSchema = z.object({
   captcha_token: z.string().trim().optional(),
 })
 
+const publicSignupSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  password: z.string().min(8).max(SUPABASE_MAX_PASSWORD_LENGTH),
+  first_name: z.string().trim().min(1).optional(),
+  firstName: z.string().trim().min(1).optional(),
+  last_name: z.string().trim().min(1).optional(),
+  lastName: z.string().trim().min(1).optional(),
+}).transform(body => ({
+  email: body.email,
+  password: body.password,
+  firstName: body.firstName ?? body.first_name ?? '',
+  lastName: body.lastName ?? body.last_name ?? '',
+}))
 const adminCreditGrantSchema = z.object({
   org_id: z.string().trim().min(1),
   amount: z.number().int().min(1),
@@ -1773,6 +1787,42 @@ export function createWorkerApp(storageFactory: StorageFactory = defaultStorageF
     if (error instanceof Response)
       return error
     return jsonError(c, 500, 'internal_error', error.message || 'Internal error')
+  })
+
+  app.post('/auth/signup', async (c) => {
+    if (!c.env.SUPABASE_URL || !c.env.SUPABASE_SERVICE_ROLE_KEY)
+      return jsonError(c, 503, 'supabase_not_configured', 'Supabase service-role config is missing')
+    const raw = await readBodyOrQuery(c)
+    if (raw instanceof Response)
+      return raw
+    const parsed = publicSignupSchema.safeParse(raw)
+    if (!parsed.success)
+      return jsonError(c, 400, 'invalid_body', 'Invalid signup body')
+    const body = parsed.data
+    const admin = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+    const { error } = await admin.auth.admin.createUser({
+      email: body.email,
+      password: body.password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: body.firstName,
+        last_name: body.lastName,
+        activation: {
+          formFilled: true,
+          enableNotifications: false,
+          legal: false,
+          optForNewsletters: false,
+        },
+      },
+    })
+    if (error)
+      return jsonError(c, 400, 'signup_failed', error.message)
+    return c.json(ok, 201)
   })
 
   app.get('/webhooks', requireAdminRequest, async (c) => {

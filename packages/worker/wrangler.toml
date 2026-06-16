@@ -2,7 +2,11 @@ name = "codepushgo-api"
 main = "src/index.ts"
 compatibility_date = "2026-06-11"
 
+routes = [
+  { pattern = "api.codepushgo.com", custom_domain = true }
+]
 [vars]
 CODEPUSHGO_ENV = "dev"
 SUPABASE_BUNDLE_BUCKET = "codepushgo-bundles"
-# Set SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and CODEPUSHGO_API_KEY with wrangler secrets.
+SUPABASE_URL = "https://umpxowxnwroafuzynvwf.supabase.co"
+# Set SUPABASE_SERVICE_ROLE_KEY and CODEPUSHGO_API_KEY with wrangler secrets.
