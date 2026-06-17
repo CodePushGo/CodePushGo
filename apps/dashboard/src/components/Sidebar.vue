@@ -15,8 +15,7 @@ import {
 import { computed } from 'vue'
 import type { Component } from 'vue'
 import type { ConsoleAppRecord } from '../services/registration'
-
-export type ConsoleSection = 'home' | 'overview' | 'releases' | 'channels' | 'devices' | 'stats' | 'api-keys' | 'settings'
+import type { ConsoleSection } from '../services/consoleRoute'
 
 const props = defineProps<{
   apps: ConsoleAppRecord[]

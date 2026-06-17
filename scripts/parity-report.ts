@@ -124,6 +124,9 @@ const dashboardMain = readWorkspaceFile('apps/dashboard/src/main.ts')
 const dashboardRouter = readWorkspaceFile('apps/dashboard/src/router.ts')
 const dashboardRouteSurface = readWorkspaceFile('apps/dashboard/src/routeSurface.ts')
 const dashboardSsoEnforcement = readWorkspaceFile('apps/dashboard/src/modules/sso-enforcement.ts')
+const dashboardConsoleView = readWorkspaceFile('apps/dashboard/src/views/ConsoleView.vue')
+const dashboardConsoleLayout = readWorkspaceFile('apps/dashboard/src/layouts/ConsoleLayout.vue')
+const dashboardConsoleRoute = readWorkspaceFile('apps/dashboard/src/services/consoleRoute.ts')
 
 const semanticChecks: SemanticCheck[] = [
   semanticCheck('monorepo packages present', ['apps/*', 'packages/*'].every(item => packageJson.workspaces?.includes(item)), 'root workspaces include apps and packages'),
@@ -131,6 +134,7 @@ const semanticChecks: SemanticCheck[] = [
   semanticCheck('CLI defaults app identity to detected RN bundle id', cliCommands.includes('detectReactNativeBundleId') && cliCommands.includes('detected?.bundleId') && cliCommands.includes('api.createApp(config.appId'), 'init/resolve path uses detected React Native bundle id and auto-syncs when authenticated'),
   semanticCheck('Worker backend accepts bundle_id/app_id and public device endpoints', workerIndex.includes('bundle_id') && workerIndex.includes("'/updates'") && workerIndex.includes("'/stats'") && workerIndex.includes("'/channel_self'"), 'Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints'),
   semanticCheck('Cloudflare Worker backend is configured', existsSync(join(workspace, 'packages/worker/wrangler.toml')) && packageJson.scripts?.['worker:dev']?.includes('wrangler dev'), 'wrangler.toml and worker scripts are present'),
+  semanticCheck('Capgo console shell split from page content', dashboardConsoleLayout.includes('Sidebar') && dashboardConsoleLayout.includes('Navbar') && dashboardConsoleLayout.includes('<slot') && dashboardConsoleView.includes('ConsoleLayout') && !dashboardConsoleView.includes("components/Navbar.vue") && !dashboardConsoleView.includes("components/Sidebar.vue") && dashboardConsoleRoute.includes('pathSection') && dashboardConsoleRoute.includes('appHref'), 'console shell owns sidebar/navbar while console route helpers own section URL mapping'),
   semanticCheck('no Supabase Edge Functions', !existsSync(join(workspace, 'supabase/functions')) && !/functions\/v1|supabase\/functions/.test(workerIndex), 'repo has only consolidated migration and Worker storage adapters'),
   semanticCheck('Capgo Vue Router shell installed', !!dashboardPackage.dependencies?.['vue-router'] && dashboardApp.includes('RouterView') && dashboardMain.includes('createDashboardRouter') && dashboardMain.includes('import.meta.glob') && dashboardMain.includes("'./modules/*.ts'") && dashboardRouter.includes('createWebHistory') && dashboardRouteSurface.includes("path: '/', redirect: '/login'") && dashboardRouteSurface.includes("path: '/app', redirect: '/apps'"), 'dashboard uses Vue Router, RouterView, module installs, and Capgo-style canonical redirects'),
   semanticCheck('Vue dashboard remains Vue 3', !!dashboardPackage.dependencies?.vue && existsSync(join(workspace, 'apps/dashboard/src/App.vue')), 'dashboard package uses Vue and App.vue exists'),
