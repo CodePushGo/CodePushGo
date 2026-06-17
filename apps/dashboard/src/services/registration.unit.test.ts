@@ -8,6 +8,7 @@ import {
   recordPlanIntent,
   registerAccount,
   requestPasswordReset,
+  resendSignupEmail,
 } from './registration'
 
 describe('registration config', () => {
@@ -163,6 +164,20 @@ describe('forgot password flow', () => {
     expect(updateUser).toHaveBeenCalledWith({ password: 'new-password' })
     expect(signOut).toHaveBeenCalledWith({ scope: 'others' })
   })
+
+describe('resend signup email flow', () => {
+  it('uses Supabase signup resend with the normalized email', async () => {
+    const resend = vi.fn().mockResolvedValue({ data: {}, error: null })
+    const client = { auth: { resend } }
+
+    await resendSignupEmail(client as any, ' User@Example.com ')
+
+    expect(resend).toHaveBeenCalledWith({
+      type: 'signup',
+      email: 'user@example.com',
+    })
+  })
+})
 })
 
 describe('console onboarding plan intent', () => {

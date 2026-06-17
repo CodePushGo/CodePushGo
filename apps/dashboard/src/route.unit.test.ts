@@ -9,6 +9,8 @@ describe('[Capgo parity] dashboard route surface', () => {
     expect(resolveDashboardRoute('/forgot_password/')).toBe('forgot-password')
     expect(resolveDashboardRoute('/confirm-signup')).toBe('confirm-signup')
     expect(resolveDashboardRoute('/confirm-signup/')).toBe('confirm-signup')
+    expect(resolveDashboardRoute('/resend_email')).toBe('resend-email')
+    expect(resolveDashboardRoute('/resend_email/')).toBe('resend-email')
     expect(resolveDashboardRoute('/app/home')).toBe('console')
   })
 })

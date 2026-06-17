@@ -1,4 +1,4 @@
-export type DashboardRoute = 'register' | 'login' | 'forgot-password' | 'confirm-signup' | 'console'
+export type DashboardRoute = 'register' | 'login' | 'forgot-password' | 'confirm-signup' | 'resend-email' | 'console'
 
 export function normalizePath(pathname: string) {
   return pathname.replace(/\/+$/, '') || '/'
@@ -14,5 +14,7 @@ export function resolveDashboardRoute(pathname: string): DashboardRoute {
     return 'forgot-password'
   if (path === '/confirm-signup')
     return 'confirm-signup'
+  if (path === '/resend_email')
+    return 'resend-email'
   return 'console'
 }

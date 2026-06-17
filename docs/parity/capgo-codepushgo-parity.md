@@ -41,6 +41,7 @@ CodePushGo test count: 353
 | no Supabase Edge Functions | pass | repo has only consolidated migration and Worker storage adapters |
 | Vue dashboard remains Vue 3 | pass | dashboard package uses Vue and App.vue exists |
 | Capgo confirm-signup secure redirect route present | pass | dashboard routes /confirm-signup and only forwards confirmation URLs to console or Supabase hosts |
+| Capgo resend-email auth flow route present | pass | dashboard routes /resend_email and calls Supabase signup resend |
 | Capgo forgot-password auth flow route present | pass | dashboard routes /forgot_password and supports Supabase reset email plus code/hash recovery |
 | React Native updater resolves bundle id automatically | pass | updater resolves RN bundle id and sends app_id/bundle_id |
 | native self-managed/direct-update complexity is disabled | pass | native contract only normalizes simple off/background update checks |

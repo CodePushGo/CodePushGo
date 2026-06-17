@@ -167,6 +167,16 @@ export async function requestPasswordReset(client: SupabaseClient, email: string
     throw error
   return data
 }
+export async function resendSignupEmail(client: SupabaseClient, email: string) {
+  const { data, error } = await client.auth.resend({
+    type: 'signup',
+    email: email.trim().toLowerCase(),
+  })
+  if (error)
+    throw error
+  return data
+}
+
 
 export async function completePasswordReset(client: SupabaseClient, password: string, params: RecoveryParams = parseRecoveryParams()) {
   if (params.error)
