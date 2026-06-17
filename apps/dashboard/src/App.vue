@@ -1,24 +1,5 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue'
-import ConfirmSignupView from './views/ConfirmSignupView.vue'
-import ConsoleView from './views/ConsoleView.vue'
-import ForgotPasswordView from './views/ForgotPasswordView.vue'
-import LoginView from './views/LoginView.vue'
-import RegisterView from './views/RegisterView.vue'
-import ResendEmailView from './views/ResendEmailView.vue'
-import SsoCallbackView from './views/SsoCallbackView.vue'
-import { resolveDashboardRoute } from './route'
-
-const path = ref(window.location.pathname)
-const route = computed(() => resolveDashboardRoute(path.value))
-</script>
-
 <template>
-  <RegisterView v-if="route === 'register'" />
-  <LoginView v-else-if="route === 'login'" />
-  <ForgotPasswordView v-else-if="route === 'forgot-password'" />
-  <ConfirmSignupView v-else-if="route === 'confirm-signup'" />
-  <ResendEmailView v-else-if="route === 'resend-email'" />
-  <SsoCallbackView v-else-if="route === 'sso-callback'" />
-  <ConsoleView v-else />
+  <div class="app-shell h-full overflow-hidden bg-slate-100 text-slate-700">
+    <RouterView class="h-full overflow-hidden" />
+  </div>
 </template>

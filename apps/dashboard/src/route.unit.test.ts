@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { canonicalRedirects, guestPath } from './routeSurface'
 import { resolveDashboardRoute } from './route'
 
 describe('[Capgo parity] dashboard route surface', () => {
@@ -14,5 +15,21 @@ describe('[Capgo parity] dashboard route surface', () => {
     expect(resolveDashboardRoute('/sso-callback')).toBe('sso-callback')
     expect(resolveDashboardRoute('/sso-callback/')).toBe('sso-callback')
     expect(resolveDashboardRoute('/app/home')).toBe('console')
+  })
+
+  it('uses Capgo-style guest paths and canonical redirects', () => {
+    expect(guestPath).toEqual(expect.arrayContaining([
+      '/login',
+      '/register',
+      '/confirm-signup',
+      '/forgot_password',
+      '/resend_email',
+      '/sso-callback',
+    ]))
+    expect(canonicalRedirects).toEqual(expect.arrayContaining([
+      { path: '/', redirect: '/login' },
+      { path: '/app', redirect: '/apps' },
+      { path: '/dashboard', redirect: '/app/home' },
+    ]))
   })
 })

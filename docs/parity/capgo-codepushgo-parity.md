@@ -39,6 +39,7 @@ CodePushGo test count: 355
 | Worker backend accepts bundle_id/app_id and public device endpoints | pass | Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints |
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
 | no Supabase Edge Functions | pass | repo has only consolidated migration and Worker storage adapters |
+| Capgo Vue Router shell installed | pass | dashboard uses Vue Router, RouterView, module installs, and Capgo-style canonical redirects |
 | Vue dashboard remains Vue 3 | pass | dashboard package uses Vue and App.vue exists |
 | Capgo confirm-signup secure redirect route present | pass | dashboard routes /confirm-signup and only forwards confirmation URLs to console or Supabase hosts |
 | Capgo resend-email auth flow route present | pass | dashboard routes /resend_email and calls Supabase signup resend |
