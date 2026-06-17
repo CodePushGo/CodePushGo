@@ -246,6 +246,17 @@ a {
   font-size: 13px;
 }
 
+.auth-status-card {
+  border: 1px solid #dce3e8;
+  border-radius: 8px;
+  padding: 22px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  color: #667681;
+  text-align: center;
+}
+
 .form-alert {
   min-height: 38px;
   border-radius: 8px;
