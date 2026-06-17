@@ -1382,6 +1382,7 @@ BEGIN
     JOIN public.stripe_info ON stripe_info.customer_id = orgs.customer_id
     JOIN public.plans ON plans.stripe_id = COALESCE(stripe_info.product_id, stripe_info.price_id)
     WHERE orgs.id = orgid
+      AND stripe_info.status = 'succeeded'
     LIMIT 1
   );
 END;

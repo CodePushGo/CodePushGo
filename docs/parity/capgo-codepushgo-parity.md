@@ -2,12 +2,12 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 349
+CodePushGo test count: 351
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 223 | 228 | verified |
-| Capgo CLI tests | 114 | 119 | verified |
+| Capgo backend tests | 224 | 229 | verified |
+| Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
 

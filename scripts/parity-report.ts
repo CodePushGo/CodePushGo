@@ -131,8 +131,8 @@ const semanticChecks: SemanticCheck[] = [
   semanticCheck('AGENTS norms present', agents.includes('Use `bun` and `bunx`') && agents.includes('Do not add Supabase Edge Functions'), 'root AGENTS.md captures repo norms'),
   semanticCheck('GitHub Actions run full local gate', ['bun run lint', 'bun run typecheck', 'bun run build', 'bun run test', 'bun run native:contract', 'bun run parity:audit'].every(command => testsWorkflow.includes(command)), 'CI test workflow mirrors local verification gate'),
 ]
-
 const semanticFailures = semanticChecks.filter(check => check.status === 'fail')
+
 const totalCodePushGoTests = matchingFilesAcrossRoots([join(workspace, 'packages'), join(workspace, 'apps')], [/\.test\.ts$/]).length
 
 const reports: SuiteReport[] = suites.map((suite) => {
@@ -152,6 +152,12 @@ const reports: SuiteReport[] = suites.map((suite) => {
     outOfScopeReason: suite.outOfScopeReason,
   }
 })
+
+const reportsWithMissingCoverage = reports.filter(report => report.status === 'missing coverage')
+const auditFailures = [
+  ...semanticFailures.map(check => `semantic:${check.name}`),
+  ...reportsWithMissingCoverage.map(report => `coverage:${report.name}`),
+]
 
 const lines = [
   '# Capgo / CodePushGo Parity Audit',
@@ -184,6 +190,6 @@ const lines = [
 
 const output = join(workspace, 'docs/parity/capgo-codepushgo-parity.md')
 writeFileSync(output, `${lines.join('\n')}\n`)
-console.log(JSON.stringify({ status: semanticFailures.length === 0 ? 'ok' : 'failed', output, reports, semanticChecks }, null, 2))
-if (semanticFailures.length > 0)
+console.log(JSON.stringify({ status: auditFailures.length === 0 ? 'ok' : 'failed', output, reports, semanticChecks, auditFailures }, null, 2))
+if (auditFailures.length > 0)
   process.exit(1)
