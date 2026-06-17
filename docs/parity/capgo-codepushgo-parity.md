@@ -2,11 +2,11 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 357
+CodePushGo test count: 358
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 224 | 235 | verified |
+| Capgo backend tests | 224 | 236 | verified |
 | Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
@@ -39,6 +39,7 @@ CodePushGo test count: 357
 | Worker backend accepts bundle_id/app_id and public device endpoints | pass | Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints |
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
 | Capgo console shared store present | pass | console auth, app selection, refresh, plan intent, and command state live outside the page view |
+| Capgo canonical app routes present | pass | app URLs are generated as /app/:nativeBundleId and legacy package URLs are redirects only |
 | Capgo console shell split from page content | pass | console shell owns sidebar/navbar while console route helpers own section URL mapping |
 | no Supabase Edge Functions | pass | repo has only consolidated migration and Worker storage adapters |
 | Capgo Vue Router shell installed | pass | dashboard uses Vue Router, RouterView, module installs, and Capgo-style canonical redirects |

@@ -52,7 +52,7 @@ describe('[Capgo parity] console store', () => {
     expect(store.pageTitle.value).toBe('Bundles')
   })
 
-  it('navigates through Capgo-style console URLs and closes shell menus', () => {
+  it('navigates through Capgo-style canonical console URLs and closes shell menus', () => {
     const pushState = vi.fn()
     const store = createConsoleStore({
       client: client() as any,
@@ -69,7 +69,7 @@ describe('[Capgo parity] console store', () => {
     store.navigate('channels')
 
     expect(store.section.value).toBe('channels')
-    expect(pushState).toHaveBeenCalledWith({}, '', '/app/p/com.example%2Fapp/channels')
+    expect(pushState).toHaveBeenCalledWith({}, '', '/app/com.example%2Fapp/channels')
     expect(store.sidebarOpen.value).toBe(false)
     expect(store.appMenuOpen.value).toBe(false)
   })

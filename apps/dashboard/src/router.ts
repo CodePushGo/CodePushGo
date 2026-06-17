@@ -17,7 +17,6 @@ export const dashboardRoutes: RouteRecordRaw[] = [
   { path: '/dashboard/apikeys', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/dashboard/settings/:pathMatch(.*)*', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/app/home', component: ConsoleView, meta: { middleware: 'auth' } },
-  { path: '/app/p/:appId/:pathMatch(.*)*', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/app/:appId/:pathMatch(.*)*', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/login', component: LoginView, meta: { layout: 'naked' } },
   { path: '/register', component: RegisterView, meta: { layout: 'naked' } },

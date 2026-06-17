@@ -15,13 +15,15 @@ describe('[Capgo parity] console route helpers', () => {
     expect(pathSection('/app/p/com.test.app')).toBe('overview')
   })
 
-  it('extracts and builds app URLs with encoded native bundle IDs', () => {
+  it('extracts and builds canonical app URLs with encoded native bundle IDs', () => {
+    expect(appIdFromPath('/app/com.example.app')).toBe('com.example.app')
+    expect(appIdFromPath('/app/com.example%2Fapp/bundles')).toBe('com.example/app')
     expect(appIdFromPath('/app/p/com.example.app')).toBe('com.example.app')
     expect(appIdFromPath('/app/p/com.example%2Fapp/bundle')).toBe('com.example/app')
     expect(appIdFromPath('/app/home')).toBe('')
-    expect(appHref('com.example/app', 'releases')).toBe('/app/p/com.example%2Fapp/bundle')
-    expect(appHref('com.example.app', 'channels')).toBe('/app/p/com.example.app/channels')
-    expect(appHref('com.example.app')).toBe('/app/p/com.example.app')
+    expect(appHref('com.example/app', 'releases')).toBe('/app/com.example%2Fapp/bundles')
+    expect(appHref('com.example.app', 'channels')).toBe('/app/com.example.app/channels')
+    expect(appHref('com.example.app')).toBe('/app/com.example.app')
   })
 
   it('keeps section titles centralized for the shell', () => {

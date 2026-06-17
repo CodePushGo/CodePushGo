@@ -33,14 +33,14 @@ export function appIdFromPath(pathname = window.location.pathname) {
 export function appHref(appId: string, target: ConsoleSection = 'overview') {
   const encoded = encodeURIComponent(appId)
   if (target === 'releases')
-    return `/app/p/${encoded}/bundle`
+    return `/app/${encoded}/bundles`
   if (target === 'channels')
-    return `/app/p/${encoded}/channels`
+    return `/app/${encoded}/channels`
   if (target === 'devices')
-    return `/app/p/${encoded}/devices`
+    return `/app/${encoded}/devices`
   if (target === 'stats')
-    return `/app/p/${encoded}/stats`
-  return `/app/p/${encoded}`
+    return `/app/${encoded}/stats`
+  return `/app/${encoded}`
 }
 
 export function consoleSectionTitle(section: ConsoleSection, onboarding = false) {
