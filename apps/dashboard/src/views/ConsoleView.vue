@@ -22,27 +22,31 @@ import {
 } from '../services/registration'
 
 interface ChannelRow {
-  id?: number | string
+  app_id?: string | null
   name: string
-  version?: string | null
-  version_id?: number | string | null
   public?: boolean | null
+  allow_self_set?: boolean | null
+  ios?: boolean | null
+  android?: boolean | null
+  electron?: boolean | null
   created_at?: string | null
   updated_at?: string | null
 }
 
 interface DeviceRow {
+  app_id?: string | null
   device_id?: string | null
   platform?: string | null
-  channel?: string | null
-  version?: string | null
-  app_id?: string | null
+  plugin_version?: string | null
+  version_name?: string | null
+  custom_id?: string | null
+  default_channel?: string | null
   updated_at?: string | null
 }
 
 interface AppStatRow {
   app_id?: string | null
-  version?: string | null
+  version_name?: string | null
   platform?: string | null
   action?: string | null
   device_id?: string | null
@@ -246,16 +250,16 @@ async function refreshAppData() {
 
   releases.value = await listAppReleases(client, selectedAppId.value)
   channels.value = await safeSelect<ChannelRow>(client, 'channels', table => table
-    .select('id,name,version,version_id,public,created_at,updated_at')
+    .select('app_id,name,public,allow_self_set,ios,android,electron,created_at,updated_at')
     .eq('app_id', selectedAppId.value)
     .order('updated_at', { ascending: false }) as never)
-  devices.value = await safeSelect<DeviceRow>(client, 'channel_devices', table => table
-    .select('device_id,platform,channel,version,app_id,updated_at')
+  devices.value = await safeSelect<DeviceRow>(client, 'devices', table => table
+    .select('app_id,device_id,platform,plugin_version,version_name,custom_id,default_channel,updated_at')
     .eq('app_id', selectedAppId.value)
     .order('updated_at', { ascending: false })
     .limit(50) as never)
-  appStats.value = await safeSelect<AppStatRow>(client, 'stats', table => table
-    .select('app_id,version,platform,action,device_id,created_at')
+  appStats.value = await safeSelect<AppStatRow>(client, 'stats_events', table => table
+    .select('app_id,version_name,platform,action,device_id,created_at')
     .eq('app_id', selectedAppId.value)
     .order('created_at', { ascending: false })
     .limit(100) as never)
@@ -493,20 +497,22 @@ startCodePushGo()</code></pre>
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Bundle</th>
+                  <th>Platforms</th>
                   <th>Public</th>
+                  <th>Self set</th>
                   <th>Updated</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="channel in channels" :key="channel.id || channel.name">
+                <tr v-for="channel in channels" :key="`${channel.app_id}-${channel.name}`">
                   <td>{{ channel.name }}</td>
-                  <td>{{ channel.version || channel.version_id || '-' }}</td>
+                  <td>{{ [channel.ios ? 'iOS' : '', channel.android ? 'Android' : '', channel.electron ? 'Electron' : ''].filter(Boolean).join(' / ') || '-' }}</td>
                   <td>{{ channel.public ? 'Yes' : 'No' }}</td>
+                  <td>{{ channel.allow_self_set ? 'Yes' : 'No' }}</td>
                   <td>{{ formatDate(channel.updated_at || channel.created_at) }}</td>
                 </tr>
                 <tr v-if="channels.length === 0">
-                  <td colspan="4" class="empty">No channel rows yet. Upload and release a bundle to create production.</td>
+                  <td colspan="5" class="empty">No channel rows yet. Upload and release a bundle to create production.</td>
                 </tr>
               </tbody>
             </table>
@@ -524,21 +530,23 @@ startCodePushGo()</code></pre>
                 <tr>
                   <th>Device</th>
                   <th>Platform</th>
-                  <th>Channel</th>
+                  <th>Default channel</th>
                   <th>Bundle</th>
+                  <th>Plugin</th>
                   <th>Last seen</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="device in devices" :key="device.device_id || `${device.platform}-${device.updated_at}`">
-                  <td>{{ device.device_id || '-' }}</td>
+                  <td>{{ device.device_id || device.custom_id || '-' }}</td>
                   <td>{{ device.platform || '-' }}</td>
-                  <td>{{ device.channel || '-' }}</td>
-                  <td>{{ device.version || '-' }}</td>
+                  <td>{{ device.default_channel || '-' }}</td>
+                  <td>{{ device.version_name || '-' }}</td>
+                  <td>{{ device.plugin_version || '-' }}</td>
                   <td>{{ formatDate(device.updated_at) }}</td>
                 </tr>
                 <tr v-if="devices.length === 0">
-                  <td colspan="5" class="empty">No devices have checked for updates yet.</td>
+                  <td colspan="6" class="empty">No devices have checked for updates yet.</td>
                 </tr>
               </tbody>
             </table>
@@ -564,7 +572,7 @@ startCodePushGo()</code></pre>
               <tbody>
                 <tr v-for="stat in appStats" :key="`${stat.action}-${stat.device_id}-${stat.created_at}`">
                   <td>{{ stat.action || '-' }}</td>
-                  <td>{{ stat.version || '-' }}</td>
+                  <td>{{ stat.version_name || '-' }}</td>
                   <td>{{ stat.platform || '-' }}</td>
                   <td>{{ stat.device_id || '-' }}</td>
                   <td>{{ formatDate(stat.created_at) }}</td>

@@ -670,8 +670,8 @@ ALTER TABLE public.releases
 ALTER TABLE public.releases
   ADD COLUMN IF NOT EXISTS key_id TEXT CHECK (key_id IS NULL OR char_length(key_id) <= 20);
 ALTER TABLE public.releases
-ALTER TABLE public.releases
   ADD COLUMN IF NOT EXISTS manifest JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.releases
   ADD COLUMN IF NOT EXISTS native_packages JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 ALTER TABLE public.releases ENABLE ROW LEVEL SECURITY;
@@ -1566,3 +1566,207 @@ CREATE POLICY deny_direct_update_on_webhook_deliveries
 ON public.webhook_deliveries AS RESTRICTIVE FOR UPDATE TO anon, authenticated USING (false) WITH CHECK (false);
 CREATE POLICY deny_direct_delete_on_webhook_deliveries
 ON public.webhook_deliveries AS RESTRICTIVE FOR DELETE TO anon, authenticated USING (false);
+
+
+CREATE TABLE IF NOT EXISTS public.plan_intents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  email TEXT NOT NULL CHECK (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+  first_name TEXT,
+  last_name TEXT,
+  plan TEXT NOT NULL CHECK (plan ~ '^[a-z0-9_-]+$'),
+  billing_period TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_period IN ('monthly', 'yearly')),
+  price_id TEXT,
+  source TEXT NOT NULL DEFAULT 'register' CHECK (source ~ '^[a-z0-9_-]+$'),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  consumed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.plan_intents ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS plan_intents_email_created_idx
+  ON public.plan_intents (lower(email), created_at DESC);
+
+CREATE INDEX IF NOT EXISTS plan_intents_user_created_idx
+  ON public.plan_intents (user_id, created_at DESC)
+  WHERE user_id IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION public.set_plan_intents_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_plan_intents_updated_at ON public.plan_intents;
+CREATE TRIGGER trg_plan_intents_updated_at
+  BEFORE UPDATE ON public.plan_intents
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_plan_intents_updated_at();
+
+DROP POLICY IF EXISTS plan_intents_anon_insert ON public.plan_intents;
+CREATE POLICY plan_intents_anon_insert
+  ON public.plan_intents
+  FOR INSERT
+  TO anon
+  WITH CHECK (user_id IS NULL);
+
+DROP POLICY IF EXISTS plan_intents_authenticated_insert ON public.plan_intents;
+CREATE POLICY plan_intents_authenticated_insert
+  ON public.plan_intents
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (user_id IS NULL OR user_id = auth.uid());
+
+DROP POLICY IF EXISTS plan_intents_authenticated_select_own ON public.plan_intents;
+CREATE POLICY plan_intents_authenticated_select_own
+  ON public.plan_intents
+  FOR SELECT
+  TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR lower(email) = lower(COALESCE(auth.jwt() ->> 'email', ''))
+  );
+
+DROP POLICY IF EXISTS plan_intents_authenticated_update_own ON public.plan_intents;
+CREATE POLICY plan_intents_authenticated_update_own
+  ON public.plan_intents
+  FOR UPDATE
+  TO authenticated
+  USING (
+    user_id = auth.uid()
+    OR (user_id IS NULL AND lower(email) = lower(COALESCE(auth.jwt() ->> 'email', '')))
+  )
+  WITH CHECK (
+    user_id = auth.uid()
+    OR (user_id IS NULL AND lower(email) = lower(COALESCE(auth.jwt() ->> 'email', '')))
+  );
+
+GRANT INSERT ON TABLE public.plan_intents TO anon;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.plan_intents TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.plan_intents TO service_role;
+
+
+DROP POLICY IF EXISTS org_users_read_own_membership ON public.org_users;
+CREATE POLICY org_users_read_own_membership
+  ON public.org_users
+  FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid()::text);
+
+DROP POLICY IF EXISTS orgs_read_member_orgs ON public.orgs;
+CREATE POLICY orgs_read_member_orgs
+  ON public.orgs
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.org_users
+      WHERE org_users.org_id = orgs.id
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS apps_read_member_org_apps ON public.apps;
+CREATE POLICY apps_read_member_org_apps
+  ON public.apps
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.org_users
+      WHERE org_users.org_id = apps.owner_org
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS releases_read_member_org_releases ON public.releases;
+CREATE POLICY releases_read_member_org_releases
+  ON public.releases
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.org_users
+      WHERE org_users.org_id = releases.owner_org
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS channels_read_member_org_channels ON public.channels;
+CREATE POLICY channels_read_member_org_channels
+  ON public.channels
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.apps
+      JOIN public.org_users ON org_users.org_id = apps.owner_org
+      WHERE apps.app_id = channels.app_id
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
+GRANT SELECT ON TABLE public.org_users TO authenticated;
+GRANT SELECT ON TABLE public.orgs TO authenticated;
+GRANT SELECT ON TABLE public.apps TO authenticated;
+GRANT SELECT ON TABLE public.releases TO authenticated;
+GRANT SELECT ON TABLE public.channels TO authenticated;
+
+DROP POLICY IF EXISTS devices_read_member_org_devices ON public.devices;
+CREATE POLICY devices_read_member_org_devices
+  ON public.devices
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.apps
+      JOIN public.org_users ON org_users.org_id = apps.owner_org
+      WHERE apps.app_id = devices.app_id
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS device_channels_read_member_org_device_channels ON public.device_channels;
+CREATE POLICY device_channels_read_member_org_device_channels
+  ON public.device_channels
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.apps
+      JOIN public.org_users ON org_users.org_id = apps.owner_org
+      WHERE apps.app_id = device_channels.app_id
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
+DROP POLICY IF EXISTS stats_events_read_member_org_stats_events ON public.stats_events;
+CREATE POLICY stats_events_read_member_org_stats_events
+  ON public.stats_events
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.apps
+      JOIN public.org_users ON org_users.org_id = apps.owner_org
+      WHERE apps.app_id = stats_events.app_id
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
+GRANT SELECT ON TABLE public.devices TO authenticated;
+GRANT SELECT ON TABLE public.device_channels TO authenticated;
+GRANT SELECT ON TABLE public.stats_events TO authenticated;
