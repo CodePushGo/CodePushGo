@@ -6,6 +6,7 @@ import ForgotPasswordView from './views/ForgotPasswordView.vue'
 import LoginView from './views/LoginView.vue'
 import RegisterView from './views/RegisterView.vue'
 import ResendEmailView from './views/ResendEmailView.vue'
+import SsoCallbackView from './views/SsoCallbackView.vue'
 import { resolveDashboardRoute } from './route'
 
 const path = ref(window.location.pathname)
@@ -18,5 +19,6 @@ const route = computed(() => resolveDashboardRoute(path.value))
   <ForgotPasswordView v-else-if="route === 'forgot-password'" />
   <ConfirmSignupView v-else-if="route === 'confirm-signup'" />
   <ResendEmailView v-else-if="route === 'resend-email'" />
+  <SsoCallbackView v-else-if="route === 'sso-callback'" />
   <ConsoleView v-else />
 </template>

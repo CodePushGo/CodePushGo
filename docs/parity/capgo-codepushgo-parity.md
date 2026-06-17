@@ -2,11 +2,11 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 353
+CodePushGo test count: 355
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 224 | 231 | verified |
+| Capgo backend tests | 224 | 233 | verified |
 | Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
@@ -42,6 +42,8 @@ CodePushGo test count: 353
 | Vue dashboard remains Vue 3 | pass | dashboard package uses Vue and App.vue exists |
 | Capgo confirm-signup secure redirect route present | pass | dashboard routes /confirm-signup and only forwards confirmation URLs to console or Supabase hosts |
 | Capgo resend-email auth flow route present | pass | dashboard routes /resend_email and calls Supabase signup resend |
+| Capgo SSO enforcement guard parity | pass | dashboard guard keeps auth routes public, skips non-email providers, sends Capgo enforcement body, caches checks, and fails closed |
+| Capgo SSO callback auth flow route present | pass | dashboard routes /sso-callback, exchanges Supabase SSO tokens/codes, clears tokens, and rejects unsafe redirects |
 | Capgo forgot-password auth flow route present | pass | dashboard routes /forgot_password and supports Supabase reset email plus code/hash recovery |
 | React Native updater resolves bundle id automatically | pass | updater resolves RN bundle id and sends app_id/bundle_id |
 | native self-managed/direct-update complexity is disabled | pass | native contract only normalizes simple off/background update checks |

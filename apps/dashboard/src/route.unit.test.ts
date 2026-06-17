@@ -11,6 +11,8 @@ describe('[Capgo parity] dashboard route surface', () => {
     expect(resolveDashboardRoute('/confirm-signup/')).toBe('confirm-signup')
     expect(resolveDashboardRoute('/resend_email')).toBe('resend-email')
     expect(resolveDashboardRoute('/resend_email/')).toBe('resend-email')
+    expect(resolveDashboardRoute('/sso-callback')).toBe('sso-callback')
+    expect(resolveDashboardRoute('/sso-callback/')).toBe('sso-callback')
     expect(resolveDashboardRoute('/app/home')).toBe('console')
   })
 })
