@@ -2,11 +2,11 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 351
+CodePushGo test count: 352
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 224 | 229 | verified |
+| Capgo backend tests | 224 | 230 | verified |
 | Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
@@ -40,6 +40,7 @@ CodePushGo test count: 351
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
 | no Supabase Edge Functions | pass | repo has only consolidated migration and Worker storage adapters |
 | Vue dashboard remains Vue 3 | pass | dashboard package uses Vue and App.vue exists |
+| Capgo forgot-password auth flow route present | pass | dashboard routes /forgot_password and supports Supabase reset email plus code/hash recovery |
 | React Native updater resolves bundle id automatically | pass | updater resolves RN bundle id and sends app_id/bundle_id |
 | native self-managed/direct-update complexity is disabled | pass | native contract only normalizes simple off/background update checks |
 | native build/store flows explicitly disabled | pass | native build automation has explicit disabled contract |

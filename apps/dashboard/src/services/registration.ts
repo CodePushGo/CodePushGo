@@ -137,6 +137,69 @@ export async function loginAccount(client: SupabaseClient, input: LoginInput) {
     throw error
   return data
 }
+export interface RecoveryParams {
+  accessToken: string
+  refreshToken: string
+  code: string
+  error: string
+  errorDescription: string
+}
+
+export function parseRecoveryParams(search = window.location.search, hash = window.location.hash): RecoveryParams {
+  const queryParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+  const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash)
+  return {
+    accessToken: hashParams.get('access_token') ?? queryParams.get('access_token') ?? '',
+    refreshToken: hashParams.get('refresh_token') ?? queryParams.get('refresh_token') ?? '',
+    code: queryParams.get('code') ?? hashParams.get('code') ?? '',
+    error: queryParams.get('error') ?? hashParams.get('error') ?? '',
+    errorDescription: queryParams.get('error_description') ?? hashParams.get('error_description') ?? '',
+  }
+}
+
+export async function requestPasswordReset(client: SupabaseClient, email: string, config = getRegistrationConfig(), captchaToken?: string) {
+  const redirectTo = `${config.consoleUrl.replace(/\/+$/, '')}/forgot_password?step=2`
+  const { data, error } = await client.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo,
+    captchaToken,
+  })
+  if (error)
+    throw error
+  return data
+}
+
+export async function completePasswordReset(client: SupabaseClient, password: string, params: RecoveryParams = parseRecoveryParams()) {
+  if (params.error)
+    throw new Error(params.errorDescription || params.error)
+
+  if (params.accessToken && params.refreshToken) {
+    const { error } = await client.auth.setSession({
+      access_token: params.accessToken,
+      refresh_token: params.refreshToken,
+    })
+    if (error)
+      throw error
+  }
+  else if (params.code) {
+    const { error } = await client.auth.exchangeCodeForSession(params.code)
+    if (error)
+      throw error
+  }
+  else {
+    throw new Error('Password reset link is expired or invalid.')
+  }
+
+  const { error: updateError } = await client.auth.updateUser({ password })
+  if (updateError)
+    throw updateError
+
+  const { error: signOutError } = await client.auth.signOut({ scope: 'others' })
+  if (signOutError)
+    throw signOutError
+
+  return { status: 'ok' as const }
+}
+
 
 export async function getCurrentSession(client: SupabaseClient): Promise<Session | null> {
   const { data, error } = await client.auth.getSession()

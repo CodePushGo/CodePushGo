@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  completePasswordReset,
   getRegistrationConfig,
   normalizeBillingPeriod,
   normalizePlan,
+  parseRecoveryParams,
   recordPlanIntent,
   registerAccount,
+  requestPasswordReset,
 } from './registration'
 
 describe('registration config', () => {
@@ -83,6 +86,82 @@ describe('registerAccount', () => {
       firstName: 'Ada',
       lastName: 'Lovelace',
     })).resolves.toMatchObject({ session })
+  })
+})
+
+describe('forgot password flow', () => {
+  it('requests a Supabase password reset with the console step two redirect', async () => {
+    const resetPasswordForEmail = vi.fn().mockResolvedValue({ data: {}, error: null })
+    const client = { auth: { resetPasswordForEmail } }
+
+    await requestPasswordReset(client as any, ' User@Example.com ', {
+      supabaseUrl: 'https://umpxowxnwroafuzynvwf.supabase.co',
+      supabaseAnonKey: 'publishable',
+      consoleUrl: 'https://console.codepushgo.com/',
+      apiUrl: 'https://api.codepushgo.com',
+      enabled: true,
+    }, 'captcha-token')
+
+    expect(resetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
+      redirectTo: 'https://console.codepushgo.com/forgot_password?step=2',
+      captchaToken: 'captcha-token',
+    })
+  })
+
+  it('parses recovery params from both query and hash values', () => {
+    expect(parseRecoveryParams('?code=abc', '#access_token=access&refresh_token=refresh')).toEqual({
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      code: 'abc',
+      error: '',
+      errorDescription: '',
+    })
+    expect(parseRecoveryParams('?error=bad&error_description=Expired', '')).toMatchObject({
+      error: 'bad',
+      errorDescription: 'Expired',
+    })
+  })
+
+  it('completes hash-token password recovery and signs out other sessions', async () => {
+    const setSession = vi.fn().mockResolvedValue({ error: null })
+    const exchangeCodeForSession = vi.fn().mockResolvedValue({ error: null })
+    const updateUser = vi.fn().mockResolvedValue({ error: null })
+    const signOut = vi.fn().mockResolvedValue({ error: null })
+    const client = { auth: { setSession, exchangeCodeForSession, updateUser, signOut } }
+
+    await expect(completePasswordReset(client as any, 'new-password', {
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      code: '',
+      error: '',
+      errorDescription: '',
+    })).resolves.toEqual({ status: 'ok' })
+
+    expect(setSession).toHaveBeenCalledWith({ access_token: 'access', refresh_token: 'refresh' })
+    expect(exchangeCodeForSession).not.toHaveBeenCalled()
+    expect(updateUser).toHaveBeenCalledWith({ password: 'new-password' })
+    expect(signOut).toHaveBeenCalledWith({ scope: 'others' })
+  })
+
+  it('completes code-based password recovery when tokens are absent', async () => {
+    const setSession = vi.fn().mockResolvedValue({ error: null })
+    const exchangeCodeForSession = vi.fn().mockResolvedValue({ error: null })
+    const updateUser = vi.fn().mockResolvedValue({ error: null })
+    const signOut = vi.fn().mockResolvedValue({ error: null })
+    const client = { auth: { setSession, exchangeCodeForSession, updateUser, signOut } }
+
+    await completePasswordReset(client as any, 'new-password', {
+      accessToken: '',
+      refreshToken: '',
+      code: 'code-123',
+      error: '',
+      errorDescription: '',
+    })
+
+    expect(setSession).not.toHaveBeenCalled()
+    expect(exchangeCodeForSession).toHaveBeenCalledWith('code-123')
+    expect(updateUser).toHaveBeenCalledWith({ password: 'new-password' })
+    expect(signOut).toHaveBeenCalledWith({ scope: 'others' })
   })
 })
 

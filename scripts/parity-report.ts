@@ -116,6 +116,9 @@ const workerIndex = readWorkspaceFile('packages/worker/src/index.ts')
 const dashboardPackage = JSON.parse(readWorkspaceFile('apps/dashboard/package.json')) as { dependencies?: Record<string, string> }
 const agents = readWorkspaceFile('AGENTS.md')
 const testsWorkflow = readWorkspaceFile('.github/workflows/tests.yml')
+const dashboardApp = readWorkspaceFile('apps/dashboard/src/App.vue')
+const dashboardRoute = readWorkspaceFile('apps/dashboard/src/route.ts')
+const dashboardRegistration = readWorkspaceFile('apps/dashboard/src/services/registration.ts')
 
 const semanticChecks: SemanticCheck[] = [
   semanticCheck('monorepo packages present', ['apps/*', 'packages/*'].every(item => packageJson.workspaces?.includes(item)), 'root workspaces include apps and packages'),
@@ -125,6 +128,7 @@ const semanticChecks: SemanticCheck[] = [
   semanticCheck('Cloudflare Worker backend is configured', existsSync(join(workspace, 'packages/worker/wrangler.toml')) && packageJson.scripts?.['worker:dev']?.includes('wrangler dev'), 'wrangler.toml and worker scripts are present'),
   semanticCheck('no Supabase Edge Functions', !existsSync(join(workspace, 'supabase/functions')) && !/functions\/v1|supabase\/functions/.test(workerIndex), 'repo has only consolidated migration and Worker storage adapters'),
   semanticCheck('Vue dashboard remains Vue 3', !!dashboardPackage.dependencies?.vue && existsSync(join(workspace, 'apps/dashboard/src/App.vue')), 'dashboard package uses Vue and App.vue exists'),
+  semanticCheck('Capgo forgot-password auth flow route present', dashboardRoute.includes("'/forgot_password'") && dashboardApp.includes('ForgotPasswordView') && dashboardRegistration.includes('requestPasswordReset') && dashboardRegistration.includes('completePasswordReset') && dashboardRegistration.includes('exchangeCodeForSession') && dashboardRegistration.includes('setSession'), 'dashboard routes /forgot_password and supports Supabase reset email plus code/hash recovery'),
   semanticCheck('React Native updater resolves bundle id automatically', updaterIndex.includes('getCodePushGoBundleId') && updaterIndex.includes('bundle_id: this.appId') && updaterIndex.includes('startCodePushGo'), 'updater resolves RN bundle id and sends app_id/bundle_id'),
   semanticCheck('native self-managed/direct-update complexity is disabled', !/directUpdateMode|setNextBundle|shouldConsumeOnLaunchDirectUpdate/.test(nativeContract), 'native contract only normalizes simple off/background update checks'),
   semanticCheck('native build/store flows explicitly disabled', existsSync(join(workspace, 'packages/cli/src/native-build-scope.ts')) && readWorkspaceFile('packages/cli/src/native-build-scope.ts').includes('intentionally out of scope'), 'native build automation has explicit disabled contract'),
