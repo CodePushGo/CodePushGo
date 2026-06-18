@@ -1,10 +1,14 @@
-export type ConsoleSection = 'home' | 'overview' | 'releases' | 'channels' | 'devices' | 'stats' | 'api-keys' | 'settings'
+export type ConsoleSection = 'home' | 'overview' | 'releases' | 'channels' | 'devices' | 'stats' | 'info' | 'access' | 'api-keys' | 'settings'
 
 export function pathSection(pathname = window.location.pathname): ConsoleSection {
   if (pathname.includes('/apikey') || pathname.includes('/api-key'))
     return 'api-keys'
   if (pathname.includes('/setting') || pathname.includes('/plans'))
     return 'settings'
+  if (pathname.includes('/access'))
+    return 'access'
+  if (pathname.includes('/info'))
+    return 'info'
   if (pathname.includes('/channel'))
     return 'channels'
   if (pathname.includes('/device'))
@@ -40,6 +44,10 @@ export function appHref(appId: string, target: ConsoleSection = 'overview') {
     return `/app/${encoded}/devices`
   if (target === 'stats')
     return `/app/${encoded}/stats`
+  if (target === 'info')
+    return `/app/${encoded}/info`
+  if (target === 'access')
+    return `/app/${encoded}/access`
   return `/app/${encoded}`
 }
 
@@ -54,6 +62,8 @@ export function consoleSectionTitle(section: ConsoleSection, onboarding = false)
     channels: 'Channels',
     devices: 'Devices',
     stats: 'Stats',
+    info: 'Info',
+    access: 'Access',
     'api-keys': 'API keys',
     settings: 'Settings',
   }

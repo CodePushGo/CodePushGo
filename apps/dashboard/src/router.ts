@@ -5,6 +5,8 @@ import ConfirmSignupView from './views/ConfirmSignupView.vue'
 import ConsoleView from './views/ConsoleView.vue'
 import ConsoleApiKeysPage from './views/console/ConsoleApiKeysPage.vue'
 import ConsoleAppLayout from './layouts/ConsoleAppLayout.vue'
+import ConsoleAppAccessPage from './views/console/ConsoleAppAccessPage.vue'
+import ConsoleAppInfoPage from './views/console/ConsoleAppInfoPage.vue'
 import ConsoleAppOverviewPage from './views/console/ConsoleAppOverviewPage.vue'
 import ConsoleBundlesPage from './views/console/ConsoleBundlesPage.vue'
 import ConsoleBundleDetailPage from './views/console/ConsoleBundleDetailPage.vue'
@@ -50,6 +52,8 @@ export const consoleRoutes: RouteRecordRaw[] = [
         path: 'app/:appId',
         component: ConsoleAppLayout,
         children: [
+          { path: 'info', component: ConsoleAppInfoPage },
+          { path: 'access', component: ConsoleAppAccessPage },
           { path: '', component: ConsoleAppOverviewPage },
           { path: 'bundles', component: ConsoleBundlesPage },
           { path: 'bundles/:bundle', component: ConsoleBundleDetailPage },

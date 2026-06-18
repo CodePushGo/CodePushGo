@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { ChartNoAxesColumn, KeyRound, Layers3, RadioTower, Settings, Smartphone, User, Users } from 'lucide-vue-next'
+import { ChartNoAxesColumn, Info, KeyRound, Layers3, RadioTower, Settings, ShieldCheck, Smartphone, User, Users } from 'lucide-vue-next'
 
 export interface ConsoleTab {
   label: string
@@ -13,6 +13,8 @@ export const appTabs: ConsoleTab[] = [
   { label: 'Channels', key: '/channels', icon: RadioTower },
   { label: 'Devices', key: '/devices', icon: Smartphone },
   { label: 'Logs', key: '/logs', icon: ChartNoAxesColumn },
+  { label: 'Info', key: '/info', icon: Info },
+  { label: 'Access', key: '/access', icon: ShieldCheck },
 ]
 
 export const settingsTabs: ConsoleTab[] = [

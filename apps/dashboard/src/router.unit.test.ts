@@ -17,6 +17,8 @@ describe('[Capgo parity] Vue Router console pages', () => {
     expect(routerSource).toContain("{ path: 'app/home', component: ConsoleHomePage }")
     expect(routerSource).toContain('component: ConsoleAppLayout')
     expect(routerSource).toContain("{ path: '', component: ConsoleAppOverviewPage }")
+    expect(routerSource).toContain("{ path: 'info', component: ConsoleAppInfoPage }")
+    expect(routerSource).toContain("{ path: 'access', component: ConsoleAppAccessPage }")
     expect(routerSource).toContain("{ path: 'bundles', component: ConsoleBundlesPage }")
     expect(routerSource).toContain("{ path: 'bundles/:bundle', component: ConsoleBundleDetailPage }")
     expect(routerSource).toContain("{ path: 'bundle/:bundle', component: ConsoleBundleDetailPage }")
