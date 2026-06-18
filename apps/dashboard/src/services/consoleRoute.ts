@@ -1,4 +1,4 @@
-export type ConsoleSection = 'home' | 'overview' | 'releases' | 'channels' | 'devices' | 'stats' | 'info' | 'access' | 'api-keys' | 'settings'
+export type ConsoleSection = 'home' | 'overview' | 'releases' | 'channels' | 'devices' | 'stats' | 'compatibility' | 'info' | 'access' | 'api-keys' | 'settings'
 
 export function pathSection(pathname = window.location.pathname): ConsoleSection {
   if (pathname.includes('/apikey') || pathname.includes('/api-key'))
@@ -13,6 +13,8 @@ export function pathSection(pathname = window.location.pathname): ConsoleSection
     return 'channels'
   if (pathname.includes('/device'))
     return 'devices'
+  if (pathname.includes('/compatibility'))
+    return 'compatibility'
   if (pathname.includes('/stat') || pathname.includes('/analytic'))
     return 'stats'
   if (pathname.includes('/bundle') || pathname.includes('/release'))
@@ -42,6 +44,8 @@ export function appHref(appId: string, target: ConsoleSection = 'overview') {
     return `/app/${encoded}/channels`
   if (target === 'devices')
     return `/app/${encoded}/devices`
+  if (target === 'compatibility')
+    return `/app/${encoded}/compatibility`
   if (target === 'stats')
     return `/app/${encoded}/stats`
   if (target === 'info')
@@ -59,6 +63,7 @@ export function consoleSectionTitle(section: ConsoleSection, onboarding = false)
     home: 'Dashboard',
     overview: 'Overview',
     releases: 'Bundles',
+    compatibility: 'Compatibility',
     channels: 'Channels',
     devices: 'Devices',
     stats: 'Stats',

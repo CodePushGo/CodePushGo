@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Copy } from 'lucide-vue-next'
+import CompatibilityBanner from '../../components/dashboard/CompatibilityBanner.vue'
 import Usage from '../../components/dashboard/Usage.vue'
 import { useConsoleStore } from '../../stores/console'
 
@@ -8,6 +9,7 @@ const {
   monthlyDevices,
   navigate,
   releases,
+  selectedAppId,
   releasesByPlatform,
 } = useConsoleStore()
 
@@ -17,6 +19,8 @@ function formatDate(value?: string | null) {
 </script>
 
 <template>
+  <CompatibilityBanner :app-id="selectedAppId" />
+
   <Usage
     :devices="monthlyDevices"
     :bundles="releases.length"

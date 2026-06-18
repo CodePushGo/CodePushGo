@@ -15,6 +15,7 @@ describe('[Capgo parity] console route helpers', () => {
     expect(pathSection('/app/p/com.test.app/stats')).toBe('stats')
     expect(pathSection('/app/p/com.test.app/info')).toBe('info')
     expect(pathSection('/app/p/com.test.app/access')).toBe('access')
+    expect(pathSection('/app/p/com.test.app/compatibility')).toBe('compatibility')
     expect(pathSection('/app/p/com.test.app')).toBe('overview')
   })
 
@@ -26,6 +27,7 @@ describe('[Capgo parity] console route helpers', () => {
     expect(appIdFromPath('/app/p/com.example%2Fapp/bundle')).toBe('com.example/app')
     expect(appIdFromPath('/app/home')).toBe('')
     expect(appHref('com.example.app', 'info')).toBe('/app/com.example.app/info')
+    expect(appHref('com.example.app', 'compatibility')).toBe('/app/com.example.app/compatibility')
     expect(appHref('com.example.app', 'access')).toBe('/app/com.example.app/access')
     expect(appHref('com.example/app', 'releases')).toBe('/app/com.example%2Fapp/bundles')
     expect(appHref('com.example.app', 'channels')).toBe('/app/com.example.app/channels')
@@ -34,6 +36,7 @@ describe('[Capgo parity] console route helpers', () => {
   it('keeps section titles centralized for the shell', () => {
     expect(consoleSectionTitle('home')).toBe('Dashboard')
     expect(consoleSectionTitle('releases')).toBe('Bundles')
+    expect(consoleSectionTitle('compatibility')).toBe('Compatibility')
     expect(consoleSectionTitle('info')).toBe('Info')
     expect(consoleSectionTitle('access')).toBe('Access')
     expect(consoleSectionTitle('settings')).toBe('Settings')

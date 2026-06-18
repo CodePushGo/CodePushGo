@@ -14,6 +14,7 @@ import ConsoleChannelsPage from './views/console/ConsoleChannelsPage.vue'
 import ConsoleChannelDetailPage from './views/console/ConsoleChannelDetailPage.vue'
 import ConsoleDeviceDetailPage from './views/console/ConsoleDeviceDetailPage.vue'
 import ConsoleDevicesPage from './views/console/ConsoleDevicesPage.vue'
+import ConsoleCompatibilityPage from './views/console/ConsoleCompatibilityPage.vue'
 import ConsoleHomePage from './views/console/ConsoleHomePage.vue'
 import ConsoleNewAppPage from './views/console/ConsoleNewAppPage.vue'
 import ConsoleSettingsLayout from './layouts/ConsoleSettingsLayout.vue'
@@ -77,6 +78,7 @@ export const consoleRoutes: RouteRecordRaw[] = [
           { path: 'devices', component: ConsoleDevicesPage },
           { path: 'device/:device', component: ConsoleDeviceDetailPage },
           { path: 'device/:device/deployments', component: ConsoleDeviceDetailPage },
+          { path: 'compatibility', component: ConsoleCompatibilityPage },
           { path: 'device/:device/logs', component: ConsoleDeviceDetailPage },
           { path: 'stats', component: ConsoleStatsPage },
           { path: 'logs', component: ConsoleStatsPage },

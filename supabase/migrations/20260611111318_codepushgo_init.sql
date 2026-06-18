@@ -1918,6 +1918,22 @@ CREATE POLICY stats_events_read_member_org_stats_events
     )
   );
 
+DROP POLICY IF EXISTS compatibility_events_read_member_org_compatibility_events ON public.compatibility_events;
+CREATE POLICY compatibility_events_read_member_org_compatibility_events
+  ON public.compatibility_events
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM public.apps
+      JOIN public.org_users ON org_users.org_id = apps.owner_org
+      WHERE apps.app_id = compatibility_events.app_id
+        AND org_users.user_id = auth.uid()::text
+    )
+  );
+
 GRANT SELECT ON TABLE public.devices TO authenticated;
 GRANT SELECT ON TABLE public.device_channels TO authenticated;
+GRANT SELECT ON TABLE public.compatibility_events TO authenticated;
 GRANT SELECT ON TABLE public.stats_events TO authenticated;

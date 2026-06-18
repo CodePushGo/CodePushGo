@@ -2,11 +2,11 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 361
+CodePushGo test count: 363
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 224 | 239 | verified |
+| Capgo backend tests | 224 | 241 | verified |
 | Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
@@ -37,6 +37,7 @@ CodePushGo test count: 361
 | CLI command handlers stay out of entrypoint | pass | CLI entrypoint wires commands to handlers in src/commands.ts |
 | Capgo console shell split from page content | pass | console shell owns sidebar/navbar, app/settings layouts own tabs, reusable table components own tables, and Vue Router owns page mapping |
 | Capgo new app route present | pass | new app page creates native-bundle-id apps through a Supabase RPC and keeps CLI auto-detection as the normal path |
+| Capgo compatibility console route present | pass | compatibility events are mounted in the app console, grouped like Capgo, surfaced from overview, and readable through authenticated Supabase RLS |
 | Worker and RN updater expose channel_self parity | pass | Worker supports plugin channel_self routes and RN updater can list, set, read, and unset device channel overrides |
 | Worker backend accepts bundle_id/app_id and public device endpoints | pass | Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints |
 | Capgo app info/access routes present | pass | app info and access pages are explicit routes instead of fallback overview pages |
