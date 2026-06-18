@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { RadioTower } from 'lucide-vue-next'
+import { Activity, Eye, History, RadioTower, Smartphone } from 'lucide-vue-next'
+import ConsoleTabs from '../../components/ConsoleTabs.vue'
+import type { ConsoleTab } from '../../constants/consoleTabs'
 import { useConsoleStore } from '../../stores/console'
 
 const route = useRoute()
@@ -25,8 +27,28 @@ const channelDevices = computed(() => devices.value.filter((device) => {
   return overrideDeviceIds.value.has(deviceId) || (device.default_channel === decodedChannelName.value && !overriddenDeviceIds.value.has(deviceId))
 }))
 const channelDeviceIds = computed(() => new Set(channelDevices.value.map(device => device.device_id).filter(Boolean)))
-const channelStats = computed(() => appStats.value.filter(stat => stat.device_id && channelDeviceIds.value.has(stat.device_id)).slice(0, 5))
+const channelStats = computed(() => appStats.value.filter(stat => stat.device_id && channelDeviceIds.value.has(stat.device_id)).slice(0, 25))
 const backHref = computed(() => `/app/${encodeURIComponent(selectedAppId.value)}/channels`)
+const channelBaseHref = computed(() => `/app/${encodeURIComponent(selectedAppId.value)}/channel/${encodeURIComponent(decodedChannelName.value)}`)
+const activeChannelTab = computed(() => {
+  const path = route.path.replace(/\/$/, '')
+  if (path.endsWith('/devices'))
+    return `${channelBaseHref.value}/devices`
+  if (path.endsWith('/history'))
+    return `${channelBaseHref.value}/history`
+  if (path.endsWith('/statistics'))
+    return `${channelBaseHref.value}/statistics`
+  if (path.endsWith('/preview'))
+    return `${channelBaseHref.value}/preview`
+  return channelBaseHref.value
+})
+const channelTabs = computed<ConsoleTab[]>(() => [
+  { label: 'Overview', key: channelBaseHref.value, icon: RadioTower },
+  { label: 'Devices', key: `${channelBaseHref.value}/devices`, icon: Smartphone },
+  { label: 'History', key: `${channelBaseHref.value}/history`, icon: History },
+  { label: 'Statistics', key: `${channelBaseHref.value}/statistics`, icon: Activity },
+  { label: 'Preview', key: `${channelBaseHref.value}/preview`, icon: Eye },
+])
 
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : '-'
@@ -45,6 +67,12 @@ function formatPlatforms() {
     channel.value.electron ? 'Electron' : '',
   ].filter(Boolean).join(' / ') || '-'
 }
+
+function deviceChannelMode(deviceId?: string | null) {
+  if (!deviceId)
+    return 'default'
+  return overrideDeviceIds.value.has(deviceId) ? 'override' : 'default'
+}
 </script>
 
 <template>
@@ -57,7 +85,9 @@ function formatPlatforms() {
       <RadioTower :size="18" />
     </header>
 
-    <div v-if="channel" class="dashboard-home-grid compact-content">
+    <ConsoleTabs v-if="channel" :tabs="channelTabs" :active-tab="activeChannelTab" />
+
+    <div v-if="channel && activeChannelTab === channelBaseHref" class="dashboard-home-grid compact-content">
       <article class="quickstart-card">
         <p class="eyebrow">Channel settings</p>
         <h2>{{ channel.name }}</h2>
@@ -97,12 +127,85 @@ function formatPlatforms() {
       </article>
     </div>
 
+    <div v-else-if="channel && activeChannelTab.endsWith('/devices')" class="table-scroll">
+      <table aria-label="Channel devices table">
+        <thead>
+          <tr>
+            <th scope="col">Device</th>
+            <th scope="col">Platform</th>
+            <th scope="col">Bundle</th>
+            <th scope="col">Channel mode</th>
+            <th scope="col">Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="device in channelDevices" :key="device.device_id || `${device.platform}-${device.updated_at}`">
+            <th scope="row">
+              <RouterLink :to="`/app/${encodeURIComponent(selectedAppId)}/device/${encodeURIComponent(device.device_id || '')}`">{{ device.device_id || device.custom_id || '-' }}</RouterLink>
+            </th>
+            <td>{{ device.platform || '-' }}</td>
+            <td>{{ device.version_name || '-' }}</td>
+            <td>{{ deviceChannelMode(device.device_id) }}</td>
+            <td>{{ formatDate(device.updated_at) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="channelDevices.length === 0" class="empty-state">No device is using this channel yet.</p>
+    </div>
+
+    <div v-else-if="channel && activeChannelTab.endsWith('/history')" class="release-feed">
+      <div v-for="release in channelReleases" :key="`${release.app_id}-${release.platform}-${release.version}`" class="release-feed-row">
+        <span class="status-dot" />
+        <div>
+          <strong>{{ release.version }}</strong>
+          <small>{{ release.platform }} / rollout {{ release.rollout ?? 100 }}%</small>
+        </div>
+        <span>{{ formatDate(release.created_at) }}</span>
+      </div>
+      <p v-if="channelReleases.length === 0" class="empty-state">No bundle is linked to this channel yet.</p>
+    </div>
+
+    <div v-else-if="channel && activeChannelTab.endsWith('/statistics')" class="table-scroll">
+      <table aria-label="Channel statistics table">
+        <thead>
+          <tr>
+            <th scope="col">Action</th>
+            <th scope="col">Device</th>
+            <th scope="col">Platform</th>
+            <th scope="col">Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="stat in channelStats" :key="`${stat.action}-${stat.device_id}-${stat.created_at}`">
+            <th scope="row">{{ stat.action || '-' }}</th>
+            <td>{{ stat.device_id || '-' }}</td>
+            <td>{{ stat.platform || '-' }}</td>
+            <td>{{ formatDate(stat.created_at) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-if="channelStats.length === 0" class="empty-state">No update stats have been recorded for this channel yet.</p>
+    </div>
+
+    <div v-else-if="channel && activeChannelTab.endsWith('/preview')" class="dashboard-home-grid compact-content">
+      <article class="quickstart-card">
+        <p class="eyebrow">Preview</p>
+        <h2>{{ channel.name }}</h2>
+        <pre><code>{{ JSON.stringify({ app_id: channel.app_id, name: channel.name, public: channel.public, allow_self_set: channel.allow_self_set, ios: channel.ios, android: channel.android }, null, 2) }}</code></pre>
+      </article>
+      <article class="quickstart-card">
+        <p class="eyebrow">Assignment</p>
+        <h2>{{ channelDevices.length }} devices</h2>
+        <p>{{ overrideDeviceIds.size }} devices explicitly target this channel. The rest use it through their default channel.</p>
+      </article>
+    </div>
+
     <div v-else class="empty-state">
       Channel not found for this native bundle ID.
     </div>
   </section>
 
-  <section v-if="channel" class="dashboard-home-grid dashboard-content compact-content">
+  <section v-if="channel && activeChannelTab === channelBaseHref" class="dashboard-home-grid dashboard-content compact-content">
     <article class="console-table-card">
       <header>
         <h2>Linked bundles</h2>

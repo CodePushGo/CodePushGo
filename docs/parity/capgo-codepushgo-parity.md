@@ -40,7 +40,7 @@ CodePushGo test count: 361
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
 | Capgo canonical app routes present | pass | app URLs are generated as /app/:nativeBundleId and legacy package URLs are redirects only |
 | Capgo bundle detail route present | pass | bundle rows navigate to real app-scoped detail and subroutes keyed by CodePushGo composite release identity |
-| Capgo channel detail route present | pass | channel rows navigate to a real app-scoped detail route and include explicit device channel overrides |
+| Capgo channel detail route present | pass | channel rows navigate to real app-scoped detail and subroutes with explicit device override/default state |
 | Capgo device detail route present | pass | device rows navigate to a real app-scoped detail route and show explicit override/default channel state |
 | Capgo protected auth guard and organization onboarding present | pass | protected routes hydrate Supabase auth, load member orgs through RLS, redirect no-org users to organization onboarding, and record plan intent there |
 | Capgo console shared store present | pass | console auth, app selection, refresh, plan intent, command state, and device channel overrides live outside the page view |
