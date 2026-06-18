@@ -1729,6 +1729,78 @@ REVOKE ALL ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, J
 REVOKE ALL ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, JSONB) FROM anon;
 GRANT EXECUTE ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, JSONB) TO service_role;
+CREATE OR REPLACE FUNCTION public.create_app_onboarding(
+  p_app_id TEXT,
+  p_name TEXT,
+  p_owner_org TEXT
+)
+RETURNS TABLE (app_id TEXT, name TEXT, owner_org TEXT, created_at TIMESTAMPTZ, need_onboarding BOOLEAN)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_user_id UUID;
+  v_app_id TEXT;
+  v_name TEXT;
+  v_owner_org TEXT;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'authentication required';
+  END IF;
+
+  v_app_id := btrim(COALESCE(p_app_id, ''));
+  IF v_app_id !~ '^[A-Za-z0-9_-]+([.][A-Za-z0-9_-]+)+$' THEN
+    RAISE EXCEPTION 'native bundle ID is invalid';
+  END IF;
+
+  v_name := btrim(COALESCE(p_name, ''));
+  IF v_name = '' THEN
+    RAISE EXCEPTION 'app name is required';
+  END IF;
+
+  v_owner_org := btrim(COALESCE(p_owner_org, ''));
+  IF v_owner_org = '' THEN
+    RAISE EXCEPTION 'organization is required';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.org_users
+    WHERE org_users.org_id = v_owner_org
+      AND org_users.user_id = v_user_id::text
+  ) THEN
+    RAISE EXCEPTION 'organization access required';
+  END IF;
+
+  INSERT INTO public.apps (app_id, name, owner_org, need_onboarding)
+  VALUES (v_app_id, v_name, v_owner_org, true)
+  ON CONFLICT (app_id) DO UPDATE
+  SET name = EXCLUDED.name,
+      owner_org = EXCLUDED.owner_org;
+
+  INSERT INTO public.channels (app_id, name, public, allow_self_set, ios, android)
+  VALUES (v_app_id, 'production', true, true, true, true)
+  ON CONFLICT (app_id, name) DO UPDATE
+  SET public = EXCLUDED.public,
+      allow_self_set = EXCLUDED.allow_self_set,
+      ios = EXCLUDED.ios,
+      android = EXCLUDED.android,
+      updated_at = now();
+
+  RETURN QUERY
+  SELECT apps.app_id, apps.name, apps.owner_org, apps.created_at, apps.need_onboarding
+  FROM public.apps
+  WHERE apps.app_id = v_app_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_app_onboarding(TEXT, TEXT, TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_app_onboarding(TEXT, TEXT, TEXT) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_app_onboarding(TEXT, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_app_onboarding(TEXT, TEXT, TEXT) TO service_role;
+
 
 
 DROP POLICY IF EXISTS org_users_read_own_membership ON public.org_users;

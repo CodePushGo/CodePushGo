@@ -17,7 +17,7 @@ export function pathSection(pathname = window.location.pathname): ConsoleSection
     return 'stats'
   if (pathname.includes('/bundle') || pathname.includes('/release'))
     return 'releases'
-  if (pathname === '/' || pathname.includes('/app/home') || pathname === '/dashboard' || pathname === '/apps')
+  if (pathname === '/' || pathname.includes('/app/home') || pathname === '/app/new' || pathname === '/dashboard' || pathname === '/apps')
     return 'home'
   return 'overview'
 }
@@ -28,7 +28,7 @@ export function appIdFromPath(pathname = window.location.pathname) {
     return decodeURIComponent(packageMatch[1])
 
   const appMatch = pathname.match(/\/app\/([^/?#]+)/)
-  if (!appMatch || appMatch[1] === 'home')
+  if (!appMatch || appMatch[1] === 'home' || appMatch[1] === 'new')
     return ''
 
   return decodeURIComponent(appMatch[1])

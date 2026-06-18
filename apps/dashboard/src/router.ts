@@ -15,6 +15,7 @@ import ConsoleChannelDetailPage from './views/console/ConsoleChannelDetailPage.v
 import ConsoleDeviceDetailPage from './views/console/ConsoleDeviceDetailPage.vue'
 import ConsoleDevicesPage from './views/console/ConsoleDevicesPage.vue'
 import ConsoleHomePage from './views/console/ConsoleHomePage.vue'
+import ConsoleNewAppPage from './views/console/ConsoleNewAppPage.vue'
 import ConsoleSettingsLayout from './layouts/ConsoleSettingsLayout.vue'
 import ConsoleSettingsPage from './views/console/ConsoleSettingsPage.vue'
 import ConsoleStatsPage from './views/console/ConsoleStatsPage.vue'
@@ -34,6 +35,7 @@ export const consoleRoutes: RouteRecordRaw[] = [
     meta: { middleware: 'auth' },
     children: [
       { path: 'apps', component: ConsoleHomePage },
+      { path: 'app/new', component: ConsoleNewAppPage },
       { path: 'app/home', component: ConsoleHomePage },
       { path: 'dashboard/apikeys', component: ConsoleApiKeysPage },
       { path: 'dashboard/settings/:pathMatch(.*)*', redirect: '/settings/organization/plans' },

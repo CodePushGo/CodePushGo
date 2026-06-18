@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Copy } from 'lucide-vue-next'
+import { Copy, Plus } from 'lucide-vue-next'
+import { RouterLink } from 'vue-router'
 import TopApps from '../../components/dashboard/TopApps.vue'
 import WelcomeBanner from '../../components/dashboard/WelcomeBanner.vue'
 import { useConsoleStore } from '../../stores/console'
@@ -23,6 +24,7 @@ const {
       <article class="quickstart-card">
         <p class="eyebrow">Add app</p>
         <h2>Let the CLI detect the bundle ID</h2>
+        <RouterLink class="primary" to="/app/new"><Plus :size="16" /> New app</RouterLink>
         <button class="command" type="button" @click="copyCommand(initCommand)">
           <code>{{ initCommand }}</code>
           <Copy :size="16" />

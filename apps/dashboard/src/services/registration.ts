@@ -43,6 +43,11 @@ export interface OrganizationOnboardingResult {
   id: string
   name: string
 }
+export interface AppOnboardingInput {
+  appId: string
+  name: string
+  ownerOrg: string
+}
 
 export interface ConsoleAppRecord {
   app_id: string
@@ -242,6 +247,23 @@ export async function getCurrentUser(client: SupabaseClient): Promise<User | nul
   if (error)
     throw error
   return data.user
+}
+
+export async function createAppOnboarding(client: SupabaseClient, input: AppOnboardingInput): Promise<ConsoleAppRecord> {
+  const appId = input.appId.trim()
+  const name = input.name.trim()
+  const ownerOrg = input.ownerOrg.trim()
+  const { data, error } = await client.rpc('create_app_onboarding', {
+    p_app_id: appId,
+    p_name: name,
+    p_owner_org: ownerOrg,
+  })
+  if (error)
+    throw error
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row?.app_id)
+    throw new Error('App was not created')
+  return row as ConsoleAppRecord
 }
 
 export async function listUserApps(client: SupabaseClient): Promise<ConsoleAppRecord[]> {

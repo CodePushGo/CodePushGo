@@ -15,6 +15,7 @@ describe('[Capgo parity] Vue Router console pages', () => {
   it('maps canonical console paths through dedicated route layouts and page components', () => {
     expect(routerSource).toContain("{ path: 'apps', component: ConsoleHomePage }")
     expect(routerSource).toContain("{ path: 'app/home', component: ConsoleHomePage }")
+    expect(routerSource).toContain("{ path: 'app/new', component: ConsoleNewAppPage }")
     expect(routerSource).toContain('component: ConsoleAppLayout')
     expect(routerSource).toContain("{ path: '', component: ConsoleAppOverviewPage }")
     expect(routerSource).toContain("{ path: 'info', component: ConsoleAppInfoPage }")

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  createOrganizationOnboarding,
   completePasswordReset,
+  createAppOnboarding,
+  createOrganizationOnboarding,
   getRegistrationConfig,
   normalizeBillingPeriod,
   normalizePlan,
@@ -236,5 +237,29 @@ describe('organization onboarding', () => {
       p_billing_period: 'yearly',
       p_metadata: { source: 'test' },
     })
+  })
+})
+
+describe('app onboarding', () => {
+  it('creates an app through the Capgo-style onboarding RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: [{ app_id: 'com.test.app', name: 'Test app', owner_org: 'org_1' }], error: null })
+    const client = { rpc }
+
+    await expect(createAppOnboarding(client as any, {
+      appId: ' com.test.app ',
+      name: ' Test app ',
+      ownerOrg: ' org_1 ',
+    })).resolves.toMatchObject({ app_id: 'com.test.app', name: 'Test app' })
+
+    expect(rpc).toHaveBeenCalledWith('create_app_onboarding', {
+      p_app_id: 'com.test.app',
+      p_name: 'Test app',
+      p_owner_org: 'org_1',
+    })
+  })
+
+  it('throws when app onboarding RPC returns no row', async () => {
+    const client = { rpc: vi.fn().mockResolvedValue({ data: [], error: null }) }
+    await expect(createAppOnboarding(client as any, { appId: 'com.test.app', name: 'Test app', ownerOrg: 'org_1' })).rejects.toThrow('App was not created')
   })
 })
