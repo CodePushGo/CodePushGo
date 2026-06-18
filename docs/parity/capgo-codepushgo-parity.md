@@ -2,11 +2,11 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 363
+CodePushGo test count: 365
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 224 | 241 | verified |
+| Capgo backend tests | 224 | 243 | verified |
 | Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
@@ -36,6 +36,7 @@ CodePushGo test count: 363
 | monorepo packages present | pass | root workspaces include apps and packages |
 | CLI command handlers stay out of entrypoint | pass | CLI entrypoint wires commands to handlers in src/commands.ts |
 | Capgo console shell split from page content | pass | console shell owns sidebar/navbar, app/settings layouts own tabs, reusable table components own tables, and Vue Router owns page mapping |
+| Capgo organization webhooks console route present | pass | organization webhooks are mounted as a dedicated settings route and use the Cloudflare Worker webhook API instead of Supabase Edge Functions |
 | Capgo new app route present | pass | new app page creates native-bundle-id apps through a Supabase RPC and keeps CLI auto-detection as the normal path |
 | Capgo compatibility console route present | pass | compatibility events are mounted in the app console, grouped like Capgo, surfaced from overview, and readable through authenticated Supabase RLS |
 | Worker and RN updater expose channel_self parity | pass | Worker supports plugin channel_self routes and RN updater can list, set, read, and unset device channel overrides |

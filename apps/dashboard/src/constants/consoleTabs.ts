@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { AlertTriangle, ChartNoAxesColumn, Info, KeyRound, Layers3, RadioTower, Settings, ShieldCheck, Smartphone, User, Users } from 'lucide-vue-next'
+import { AlertTriangle, ChartNoAxesColumn, Info, KeyRound, Layers3, RadioTower, Settings, ShieldCheck, Smartphone, User, Users, Webhook } from 'lucide-vue-next'
 
 export interface ConsoleTab {
   label: string
@@ -27,6 +27,7 @@ export const organizationTabs: ConsoleTab[] = [
   { label: 'General', key: '/settings/organization', icon: Settings },
   { label: 'Plans', key: '/settings/organization/plans', icon: KeyRound },
   { label: 'Members', key: '/settings/organization/members', icon: Users },
+  { label: 'Webhooks', key: '/settings/organization/webhooks', icon: Webhook },
 ]
 
 export const accountTabs: ConsoleTab[] = [
