@@ -41,7 +41,7 @@ CodePushGo test count: 359
 | Capgo protected auth guard and organization onboarding present | pass | protected routes hydrate Supabase auth, load member orgs through RLS, redirect no-org users to organization onboarding, and record plan intent there |
 | Capgo console shared store present | pass | console auth, app selection, refresh, plan intent, and command state live outside the page view |
 | Capgo canonical app routes present | pass | app URLs are generated as /app/:nativeBundleId and legacy package URLs are redirects only |
-| Capgo console shell split from page content | pass | console shell owns sidebar/navbar while console route helpers own section URL mapping |
+| Capgo console shell split from page content | pass | console shell owns sidebar/navbar, route helpers own section URL mapping, and console page content is split into Capgo-style page modules |
 | no Supabase Edge Functions | pass | repo has only consolidated migration and Worker storage adapters |
 | Capgo Vue Router shell installed | pass | dashboard uses Vue Router, RouterView, module installs, and Capgo-style canonical redirects |
 | Vue dashboard remains Vue 3 | pass | dashboard package uses Vue and App.vue exists |
