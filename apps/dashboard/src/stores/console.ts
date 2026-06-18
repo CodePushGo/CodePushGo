@@ -36,6 +36,14 @@ export interface DeviceRow {
   default_channel?: string | null
   updated_at?: string | null
 }
+export interface DeviceChannelRow {
+  app_id?: string | null
+  device_id: string
+  channel: string
+  created_at?: string | null
+  updated_at?: string | null
+}
+
 
 export interface AppStatRow {
   app_id?: string | null
@@ -86,6 +94,7 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
   const releases = ref<ConsoleReleaseRecord[]>([])
   const channels = ref<ChannelRow[]>([])
   const devices = ref<DeviceRow[]>([])
+  const deviceChannels = ref<DeviceChannelRow[]>([])
   const appStats = ref<AppStatRow[]>([])
   const selectedAppId = ref('')
   const loading = ref(true)
@@ -179,6 +188,7 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
       releases.value = []
       channels.value = []
       devices.value = []
+      deviceChannels.value = []
       appStats.value = []
       return
     }
@@ -193,6 +203,10 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
       .eq('app_id', selectedAppId.value)
       .order('updated_at', { ascending: false })
       .limit(50) as never)
+    deviceChannels.value = await safeSelect<DeviceChannelRow>(client, 'device_channels', table => table
+      .select('app_id,device_id,channel,created_at,updated_at')
+      .eq('app_id', selectedAppId.value)
+      .order('updated_at', { ascending: false }) as never)
     appStats.value = await safeSelect<AppStatRow>(client, 'stats_events', table => table
       .select('app_id,version_name,platform,action,device_id,created_at')
       .eq('app_id', selectedAppId.value)
@@ -298,6 +312,7 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
     copiedCommand,
     copyCommand,
     devices,
+    deviceChannels,
     displayName,
     error,
     firstName,

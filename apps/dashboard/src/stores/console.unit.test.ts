@@ -26,6 +26,8 @@ function client(session: unknown = { access_token: 'token' }) {
         return chain([{ app_id: 'com.test.app', name: 'Test app' }])
       if (table === 'releases')
         return chain([{ app_id: 'com.test.app', version: '1.0.0', platform: 'ios', channel: 'production' }])
+      if (table === 'device_channels')
+        return chain([{ app_id: 'com.test.app', device_id: 'device_1', channel: 'beta' }])
       return chain([])
     }),
   }
@@ -48,6 +50,7 @@ describe('[Capgo parity] console store', () => {
     expect(store.user.value?.email).toBe('user@example.com')
     expect(store.selectedAppId.value).toBe('com.test.app')
     expect(store.section.value).toBe('releases')
+    expect(store.deviceChannels.value).toEqual([{ app_id: 'com.test.app', device_id: 'device_1', channel: 'beta' }])
     expect(store.releases.value).toHaveLength(1)
     expect(store.pageTitle.value).toBe('Bundles')
   })

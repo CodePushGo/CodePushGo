@@ -3,7 +3,7 @@ import { Smartphone } from 'lucide-vue-next'
 import DeviceTable from '../../components/tables/DeviceTable.vue'
 import { useConsoleStore } from '../../stores/console'
 
-const { devices } = useConsoleStore()
+const { devices, selectedAppId } = useConsoleStore()
 </script>
 
 <template>
@@ -12,6 +12,6 @@ const { devices } = useConsoleStore()
       <h2>Devices</h2>
       <Smartphone :size="18" />
     </header>
-    <DeviceTable :devices="devices" />
+    <DeviceTable :app-id="selectedAppId" :devices="devices" />
   </section>
 </template>

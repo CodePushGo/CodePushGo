@@ -8,6 +8,7 @@ const route = useRoute()
 const {
   appStats,
   channels,
+  deviceChannels,
   devices,
   releases,
   selectedAppId,
@@ -17,7 +18,12 @@ const channelName = computed(() => String(route.params.channel || ''))
 const decodedChannelName = computed(() => decodeURIComponent(channelName.value))
 const channel = computed(() => channels.value.find(row => row.name === decodedChannelName.value))
 const channelReleases = computed(() => releases.value.filter(release => release.channel === decodedChannelName.value))
-const channelDevices = computed(() => devices.value.filter(device => device.default_channel === decodedChannelName.value))
+const overrideDeviceIds = computed(() => new Set(deviceChannels.value.filter(row => row.channel === decodedChannelName.value).map(row => row.device_id)))
+const overriddenDeviceIds = computed(() => new Set(deviceChannels.value.map(row => row.device_id)))
+const channelDevices = computed(() => devices.value.filter((device) => {
+  const deviceId = device.device_id || ''
+  return overrideDeviceIds.value.has(deviceId) || (device.default_channel === decodedChannelName.value && !overriddenDeviceIds.value.has(deviceId))
+}))
 const channelDeviceIds = computed(() => new Set(channelDevices.value.map(device => device.device_id).filter(Boolean)))
 const channelStats = computed(() => appStats.value.filter(stat => stat.device_id && channelDeviceIds.value.has(stat.device_id)).slice(0, 5))
 const backHref = computed(() => `/app/${encodeURIComponent(selectedAppId.value)}/channels`)
