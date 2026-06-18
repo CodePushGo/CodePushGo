@@ -20,6 +20,11 @@ describe('[Capgo parity] Vue Router console pages', () => {
     expect(routerSource).toContain("{ path: 'bundles', component: ConsoleBundlesPage }")
     expect(routerSource).toContain("{ path: 'bundles/:bundle', component: ConsoleBundleDetailPage }")
     expect(routerSource).toContain("{ path: 'bundle/:bundle', component: ConsoleBundleDetailPage }")
+    const bundleSubroutes = ['history', 'manifest', 'dependencies', 'preview']
+    for (const bundleSubroute of bundleSubroutes) {
+      expect(routerSource).toContain(`{ path: 'bundle/:bundle/${bundleSubroute}', component: ConsoleBundleDetailPage }`)
+      expect(routerSource).toContain(`{ path: 'bundles/:bundle/${bundleSubroute}', component: ConsoleBundleDetailPage }`)
+    }
     expect(routerSource).not.toContain("{ path: 'bundle/:bundle', component: ConsoleBundlesPage }")
     expect(routerSource).toContain("{ path: 'channels', component: ConsoleChannelsPage }")
     expect(routerSource).toContain("{ path: 'channel/:channel', component: ConsoleChannelDetailPage }")
