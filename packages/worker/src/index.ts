@@ -1393,9 +1393,9 @@ function normalizeExpiration(value: string | null | undefined): { expiresAt?: st
 }
 
 async function normalizeApiKeyBindings(c: Context, storage: StorageDriver, bindings: ApiKeyBindingInput[] | undefined): Promise<ApiKeyBindingRecord[] | Response> {
-  const source: ApiKeyBindingInput[] = bindings && bindings.length > 0
-    ? bindings
-    : [{ roleName: 'org_admin', scopeType: 'org', orgId: 'default-org', appId: undefined, reason: undefined }]
+  if (!bindings || bindings.length === 0)
+    return jsonError(c, 400, 'bindings_required', 'API key bindings are required')
+  const source = bindings
   const normalized: ApiKeyBindingRecord[] = []
 
   for (const binding of source) {

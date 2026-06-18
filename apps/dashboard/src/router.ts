@@ -51,6 +51,7 @@ export const consoleRoutes: RouteRecordRaw[] = [
           { path: 'account/:pathMatch(.*)*', component: ConsoleSettingsPage },
           { path: 'organization/members', component: ConsoleOrganizationMembersPage },
           { path: 'organization/webhooks', component: ConsoleOrganizationWebhooksPage },
+          { path: 'organization/api-keys', redirect: '/dashboard/apikeys' },
           { path: 'organization', component: ConsoleSettingsPage },
           { path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage },
         ],

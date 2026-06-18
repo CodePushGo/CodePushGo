@@ -52,6 +52,7 @@ describe('[Capgo parity] Vue Router console pages', () => {
     expect(routerSource).toContain("{ path: 'organization/members', component: ConsoleOrganizationMembersPage }")
     expect(routerSource.indexOf("{ path: 'organization/webhooks', component: ConsoleOrganizationWebhooksPage }")).toBeLessThan(routerSource.indexOf("{ path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage }"))
     expect(routerSource.indexOf("{ path: 'organization/members', component: ConsoleOrganizationMembersPage }")).toBeLessThan(routerSource.indexOf("{ path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage }"))
+    expect(routerSource).toContain("{ path: 'organization/api-keys', redirect: '/dashboard/apikeys' }")
   })
 
   it('does not register broad top-level console catchalls before page routes', () => {

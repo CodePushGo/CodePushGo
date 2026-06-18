@@ -86,6 +86,22 @@ describe('[Capgo parity] [GET] /apikey operations', () => {
     expect(emptyName.status).toBe(400)
     expect(await emptyName.json()).toMatchObject({ error: 'name_is_required' })
 
+
+    const missingBindings = await app.request('https://api.test/apikey', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ name: 'missing-bindings' }),
+    }, env)
+    expect(missingBindings.status).toBe(400)
+    expect(await missingBindings.json()).toMatchObject({ error: 'bindings_required' })
+
+    const emptyBindings = await app.request('https://api.test/apikey', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ name: 'empty-bindings', bindings: [] }),
+    }, env)
+    expect(emptyBindings.status).toBe(400)
+    expect(await emptyBindings.json()).toMatchObject({ error: 'bindings_required' })
     const invalidScope = await app.request('https://api.test/apikey', {
       method: 'POST',
       headers: authHeaders,
@@ -109,6 +125,7 @@ describe('[Capgo parity] [GET] /apikey operations', () => {
     }, env)
     expect(missingApp.status).toBe(404)
     expect(await missingApp.json()).toMatchObject({ error: 'binding_failed' })
+
 
     const create = await app.request('https://api.test/apikey', {
       method: 'POST',
@@ -157,6 +174,7 @@ describe('[Capgo parity] app-limited API key restrictions', () => {
       headers: keyHeaders(limited.key),
       body: JSON.stringify({ name: 'blocked', bindings: appBindings(appId) }),
     }, env)
+
     expect(create.status).toBe(400)
     expect(await create.json()).toMatchObject({ error: 'cannot_create_apikey' })
 
@@ -175,5 +193,38 @@ describe('[Capgo parity] app-limited API key restrictions', () => {
     const remove = await app.request(`https://api.test/apikey/${sibling.id}`, { method: 'DELETE', headers: keyHeaders(limited.key) }, env)
     expect(remove.status).toBe(401)
     expect(await remove.json()).toMatchObject({ error: 'cannot_delete_apikey' })
+  })
+})
+
+describe('[Capgo parity] [PUT] /apikey regenerate operations', () => {
+  it('regenerates the token, rejects the old token, and accepts rename in the same request', async () => {
+    const { app, env } = testApp()
+    const create = await app.request('https://api.test/apikey', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ name: 'regen-target', bindings: orgBindings() }),
+    }, env)
+    expect(create.status).toBe(200)
+    const created = await create.json() as { id: number, key: string }
+
+    const regenerated = await app.request(`https://api.test/apikey/${created.id}`, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({ name: 'regen-renamed', regenerate: true }),
+    }, env)
+    expect(regenerated.status).toBe(200)
+    const regeneratedBody = await regenerated.json() as { id: number, key: string, name: string }
+    expect(regeneratedBody.id).toBe(created.id)
+    expect(regeneratedBody.name).toBe('regen-renamed')
+    expect(regeneratedBody.key).toMatch(/^cpg_/)
+    expect(regeneratedBody.key).not.toBe(created.key)
+
+    const oldToken = await app.request('https://api.test/apikey', { headers: keyHeaders(created.key) }, env)
+    expect(oldToken.status).toBe(401)
+    expect(await oldToken.json()).toMatchObject({ error: 'unauthorized' })
+
+    const newToken = await app.request('https://api.test/apikey', { headers: keyHeaders(regeneratedBody.key) }, env)
+    expect(newToken.status).toBe(200)
+    expect(await newToken.json()).toEqual(expect.arrayContaining([expect.objectContaining({ id: created.id, name: 'regen-renamed' })]))
   })
 })
