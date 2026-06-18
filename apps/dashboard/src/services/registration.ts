@@ -57,10 +57,17 @@ export interface ConsoleReleaseRecord {
   version: string
   platform: 'ios' | 'android'
   channel: string
+  path?: string | null
+  checksum?: string | null
+  session_key?: string | null
+  key_id?: string | null
   size?: number | null
   mandatory?: boolean | null
   rollout?: number | null
   notes?: string | null
+  min_update_version?: string | null
+  manifest?: unknown[] | null
+  native_packages?: unknown[] | null
   created_at?: string
 }
 
@@ -252,7 +259,7 @@ export async function listUserApps(client: SupabaseClient): Promise<ConsoleAppRe
 export async function listAppReleases(client: SupabaseClient, appId: string): Promise<ConsoleReleaseRecord[]> {
   const { data, error } = await client
     .from('releases')
-    .select('app_id,version,platform,channel,size,mandatory,rollout,notes,created_at')
+    .select('app_id,version,platform,channel,path,checksum,session_key,key_id,size,mandatory,rollout,notes,min_update_version,manifest,native_packages,created_at')
     .eq('app_id', appId)
     .order('created_at', { ascending: false })
     .limit(20)

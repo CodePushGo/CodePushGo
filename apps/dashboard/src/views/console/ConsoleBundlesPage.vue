@@ -6,6 +6,7 @@ import { useConsoleStore } from '../../stores/console'
 const {
   copyCommand,
   releases,
+  selectedAppId,
   uploadCommand,
 } = useConsoleStore()
 </script>
@@ -16,6 +17,6 @@ const {
       <h2>Bundles</h2>
       <button type="button" @click="copyCommand(uploadCommand)"><UploadCloud :size="16" /> Upload command</button>
     </header>
-    <BundleTable :releases="releases" />
+    <BundleTable :app-id="selectedAppId" :releases="releases" />
   </section>
 </template>

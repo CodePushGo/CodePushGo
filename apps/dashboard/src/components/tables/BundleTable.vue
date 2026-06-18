@@ -1,9 +1,19 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import type { ConsoleReleaseRecord } from '../../services/registration'
 
-defineProps<{
+const props = defineProps<{
+  appId: string
   releases: ConsoleReleaseRecord[]
 }>()
+
+function bundleKey(release: ConsoleReleaseRecord) {
+  return `${release.platform}:${release.channel}:${release.version}`
+}
+
+function bundleHref(release: ConsoleReleaseRecord) {
+  return props.appId ? `/app/${encodeURIComponent(props.appId)}/bundle/${encodeURIComponent(bundleKey(release))}` : '#'
+}
 
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : '-'
@@ -25,7 +35,11 @@ function formatDate(value?: string | null) {
       </thead>
       <tbody>
         <tr v-for="release in releases" :key="`${release.app_id}-${release.platform}-${release.channel}-${release.version}`">
-          <td>{{ release.version }}</td>
+          <th scope="row">
+            <RouterLink :to="bundleHref(release)">
+              {{ release.version }}
+            </RouterLink>
+          </th>
           <td>{{ release.platform }}</td>
           <td>{{ release.channel }}</td>
           <td>{{ release.rollout ?? 100 }}%</td>

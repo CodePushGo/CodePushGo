@@ -39,6 +39,7 @@ CodePushGo test count: 361
 | Worker backend accepts bundle_id/app_id and public device endpoints | pass | Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints |
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
 | Capgo canonical app routes present | pass | app URLs are generated as /app/:nativeBundleId and legacy package URLs are redirects only |
+| Capgo bundle detail route present | pass | bundle rows navigate to a real app-scoped detail route keyed by CodePushGo composite release identity |
 | Capgo channel detail route present | pass | channel rows navigate to a real app-scoped detail route and include explicit device channel overrides |
 | Capgo device detail route present | pass | device rows navigate to a real app-scoped detail route and show explicit override/default channel state |
 | Capgo protected auth guard and organization onboarding present | pass | protected routes hydrate Supabase auth, load member orgs through RLS, redirect no-org users to organization onboarding, and record plan intent there |

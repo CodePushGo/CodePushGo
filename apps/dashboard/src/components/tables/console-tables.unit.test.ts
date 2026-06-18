@@ -17,6 +17,12 @@ describe('[Capgo parity] console table components', () => {
       expect(source(path)).toContain(label)
     })
 
+    const bundleTable = source('apps/dashboard/src/components/tables/BundleTable.vue')
+    expect(bundleTable).toContain('RouterLink')
+    expect(bundleTable).toContain('appId: string')
+    expect(bundleTable).toContain('function bundleKey')
+    expect(bundleTable).toContain('/bundle/')
+
     const channelTable = source('apps/dashboard/src/components/tables/ChannelTable.vue')
     expect(channelTable).toContain('RouterLink')
     expect(channelTable).toContain('appId: string')
