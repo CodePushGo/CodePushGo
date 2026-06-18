@@ -70,6 +70,8 @@ export const consoleRoutes: RouteRecordRaw[] = [
           { path: 'channel/:channel/preview', component: ConsoleChannelDetailPage },
           { path: 'devices', component: ConsoleDevicesPage },
           { path: 'device/:device', component: ConsoleDeviceDetailPage },
+          { path: 'device/:device/deployments', component: ConsoleDeviceDetailPage },
+          { path: 'device/:device/logs', component: ConsoleDeviceDetailPage },
           { path: 'stats', component: ConsoleStatsPage },
           { path: 'logs', component: ConsoleStatsPage },
           { path: ':pathMatch(.*)*', component: ConsoleAppOverviewPage },

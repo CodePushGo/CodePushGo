@@ -34,6 +34,9 @@ describe('[Capgo parity] Vue Router console pages', () => {
     expect(routerSource).not.toContain("{ path: 'channel/:channel', component: ConsoleChannelsPage }")
     expect(routerSource).toContain("{ path: 'devices', component: ConsoleDevicesPage }")
     expect(routerSource).toContain("{ path: 'device/:device', component: ConsoleDeviceDetailPage }")
+    const deviceSubroutes = ['deployments', 'logs']
+    for (const deviceSubroute of deviceSubroutes)
+      expect(routerSource).toContain(`{ path: 'device/:device/${deviceSubroute}', component: ConsoleDeviceDetailPage }`)
     expect(routerSource).not.toContain("{ path: 'device/:device', component: ConsoleDevicesPage }")
     expect(routerSource).toContain("{ path: 'logs', component: ConsoleStatsPage }")
     expect(routerSource).toContain("{ path: 'dashboard/apikeys', component: ConsoleApiKeysPage }")
