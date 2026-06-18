@@ -67,4 +67,43 @@ describe('[Capgo parity] auth guard', () => {
 
     expect(next).toHaveBeenCalledWith()
   })
+
+  it('loads organizations through the Supabase orgs query when no fetch override is provided', async () => {
+    const order = vi.fn().mockResolvedValue({ data: [{ id: 'org_1', name: 'Acme', created_by: 'user_123', website: null, created_at: '2026-06-18' }], error: null })
+    const select = vi.fn(() => ({ order }))
+    const from = vi.fn(() => ({ select }))
+    const setOrganizations = vi.fn()
+
+    const next = await runGuard({
+      client: { auth: {}, from } as any,
+      getSession: async () => ({ data: { session: { access_token: 'token', user: user() } as any } }),
+      getUser: async () => ({ data: { user: user() } }),
+      setAuthUser: vi.fn(),
+      setOrganizations,
+    })
+
+    expect(from).toHaveBeenCalledWith('orgs')
+    expect(select).toHaveBeenCalledWith('id,name,created_by,website,created_at')
+    expect(order).toHaveBeenCalledWith('created_at', { ascending: false })
+    expect(setOrganizations).toHaveBeenCalledWith([expect.objectContaining({ id: 'org_1', gid: 'org_1' })])
+    expect(next).toHaveBeenCalledWith()
+  })
+
+  it('treats Supabase org query errors as no organization and sends users to onboarding', async () => {
+    const order = vi.fn().mockResolvedValue({ data: null, error: new Error('rls denied') })
+    const select = vi.fn(() => ({ order }))
+    const from = vi.fn(() => ({ select }))
+    const setOrganizations = vi.fn()
+
+    const next = await runGuard({
+      client: { auth: {}, from } as any,
+      getSession: async () => ({ data: { session: { access_token: 'token', user: user() } as any } }),
+      getUser: async () => ({ data: { user: user() } }),
+      setAuthUser: vi.fn(),
+      setOrganizations,
+    })
+
+    expect(setOrganizations).toHaveBeenCalledWith([])
+    expect(next).toHaveBeenCalledWith({ path: '/onboarding/organization', query: { to: '/app/home' } })
+  })
 })

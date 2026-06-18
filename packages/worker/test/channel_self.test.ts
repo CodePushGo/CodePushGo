@@ -74,8 +74,8 @@ describe('[Capgo parity] /channel_self operations', () => {
     const channels = await app.request(`https://api.test/channel_self?app_id=${appId}&device_id=device-1&platform=ios`, { method: 'GET' }, env)
     expect(channels.status).toBe(200)
     expect(await channels.json()).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: 'beta', allowSelfSet: true }),
-      expect.objectContaining({ name: 'locked', allowSelfSet: false }),
+      expect.objectContaining({ name: 'beta', allow_self_set: true, allowSelfSet: true }),
+      expect.objectContaining({ name: 'locked', allow_self_set: false, allowSelfSet: false }),
     ]))
   })
 

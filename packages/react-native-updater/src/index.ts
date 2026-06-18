@@ -38,6 +38,24 @@ export interface CheckForUpdateOptions {
   deviceId?: string
 }
 
+export interface ChannelSelfRequestOptions {
+  deviceId?: string
+  defaultChannel?: string
+}
+
+export interface ChannelSelfRecord {
+  id?: string | number
+  name: string
+  public: boolean
+  allow_self_set?: boolean
+  allowSelfSet?: boolean
+}
+
+export interface ChannelSelfState {
+  status: 'ok' | 'override' | 'default'
+  channel?: string
+}
+
 export interface DownloadedUpdate {
   update: Extract<UpdateResponse, { available: true }>
   bytes: ArrayBuffer
@@ -270,6 +288,19 @@ export class CodePushGoClient {
     return generated
   }
 
+  private async channelSelfPayload(options: ChannelSelfRequestOptions = {}) {
+    const runtime = runtimeGlobal().__CODEPUSHGO_CONFIG__
+    return {
+      app_id: this.appId,
+      bundle_id: this.appId,
+      device_id: options.deviceId ?? await this.getDeviceId(),
+      platform: this.options.platform,
+      version_name: this.options.currentVersion,
+      plugin_version: this.options.pluginVersion ?? '0.1.0',
+      defaultChannel: options.defaultChannel ?? this.options.channel ?? runtime?.channel ?? 'production',
+    }
+  }
+
   async checkForUpdate(options: CheckForUpdateOptions = {}): Promise<UpdateResponse> {
     const runtime = runtimeGlobal().__CODEPUSHGO_CONFIG__
     const defaultChannel = this.options.channel ?? runtime?.channel ?? 'production'
@@ -292,6 +323,48 @@ export class CodePushGoClient {
     })
 
     return parseJsonResponse<UpdateResponse>(response)
+  }
+
+  async listChannels(options: ChannelSelfRequestOptions = {}): Promise<ChannelSelfRecord[]> {
+    const payload = await this.channelSelfPayload(options)
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(payload))
+      query.set(key, String(value))
+
+    const response = await this.fetcher(`${this.endpoint}/channel_self?${query.toString()}`, {
+      method: 'GET',
+    })
+    return parseJsonResponse<ChannelSelfRecord[]>(response)
+  }
+
+  async getChannel(options: ChannelSelfRequestOptions = {}): Promise<ChannelSelfState> {
+    const response = await this.fetcher(`${this.endpoint}/channel_self`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(await this.channelSelfPayload(options)),
+    })
+    return parseJsonResponse<ChannelSelfState>(response)
+  }
+
+  async setChannel(channel: string, options: ChannelSelfRequestOptions = {}): Promise<ChannelSelfState> {
+    const response = await this.fetcher(`${this.endpoint}/channel_self`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...await this.channelSelfPayload(options), channel }),
+    })
+    return parseJsonResponse<ChannelSelfState>(response)
+  }
+
+  async unsetChannel(options: ChannelSelfRequestOptions = {}): Promise<{ status: 'ok' }> {
+    const payload = await this.channelSelfPayload(options)
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(payload))
+      query.set(key, String(value))
+
+    const response = await this.fetcher(`${this.endpoint}/channel_self?${query.toString()}`, {
+      method: 'DELETE',
+    })
+    return parseJsonResponse<{ status: 'ok' }>(response)
   }
 
   async downloadUpdate(update: Extract<UpdateResponse, { available: true }>): Promise<DownloadedUpdate> {

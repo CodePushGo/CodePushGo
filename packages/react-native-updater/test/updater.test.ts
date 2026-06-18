@@ -58,6 +58,24 @@ function mockReactNativeBundleId(bundleId: string) {
   }
 }
 
+function mockReactNativeModule(module: unknown) {
+  const runtime = globalThis as RuntimeWithRequire
+  const previousRequire = runtime.require
+  runtime.require = (name: string) => {
+    if (name !== 'react-native')
+      return previousRequire?.(name)
+
+    return module
+  }
+
+  return () => {
+    if (previousRequire)
+      runtime.require = previousRequire
+    else
+      delete runtime.require
+  }
+}
+
 afterEach(() => {
   clearCodePushGoConfig()
 })
@@ -243,6 +261,92 @@ describe('React Native updater client', () => {
     }
   })
 
+  it('detects bundle id from RNCodePushGo getConstants fallback', () => {
+    const restore = mockReactNativeModule({
+      NativeModules: {
+        RNCodePushGo: {
+          getConstants: () => ({ bundleId: 'com.example.rnmodule' }),
+        },
+      },
+    })
+
+    try {
+      expect(getCodePushGoBundleId('ios')).toBe('com.example.rnmodule')
+    }
+    finally {
+      restore()
+    }
+  })
+
+  it('detects Android application id from native ApplicationInfo fallback', () => {
+    const restore = mockReactNativeModule({
+      NativeModules: {
+        ApplicationInfo: { applicationId: 'com.example.applicationinfo' },
+      },
+    })
+
+    try {
+      expect(getCodePushGoBundleId('android')).toBe('com.example.applicationinfo')
+    }
+    finally {
+      restore()
+    }
+  })
+
+  it('detects Expo manifest2 native ids from React Native constants', () => {
+    const restore = mockReactNativeModule({
+      NativeModules: {
+        ExpoConstants: {
+          manifest2: {
+            extra: {
+              expoClient: {
+                ios: { bundleIdentifier: 'com.example.expoios' },
+                android: { package: 'com.example.expoandroid' },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    try {
+      expect(getCodePushGoBundleId('ios')).toBe('com.example.expoios')
+      expect(getCodePushGoBundleId('android')).toBe('com.example.expoandroid')
+    }
+    finally {
+      restore()
+    }
+  })
+
+  it('keeps explicit bundleId ahead of detected native identity', async () => {
+    const restore = mockReactNativeBundleId('com.example.detected')
+    const requests: Array<{ body?: unknown }> = []
+    const fetcher: FetchLike = async (_input, init) => {
+      requests.push({ body: init?.body ? JSON.parse(String(init.body)) : undefined })
+      return response({ status: 'ok', available: false, message: 'No update available' })
+    }
+
+    try {
+      const client = createCodePushGoClient({
+        bundleId: 'com.example.explicit',
+        endpoint: 'https://api.test',
+        platform: 'ios',
+        currentVersion: '1.0.0',
+        deviceId: 'device-1',
+        fetch: fetcher,
+      })
+
+      await client.checkForUpdate()
+      expect(requests[0]?.body).toMatchObject({
+        app_id: 'com.example.explicit',
+        bundle_id: 'com.example.explicit',
+      })
+    }
+    finally {
+      restore()
+    }
+  })
+
   it('starts with auto update enabled by default and downloads the available bundle', async () => {
     const restore = mockReactNativeBundleId('com.example.autostart')
     const calls: Array<{ url: string, method: string, body?: unknown }> = []
@@ -318,5 +422,78 @@ describe('React Native updater client', () => {
       defaultChannel: 'production',
       channel: 'beta',
     })
+  })
+
+  it('lists self-selectable channels through channel_self with plugin-compatible response shape', async () => {
+    const requests: Array<{ url: string, method: string }> = []
+    const fetcher: FetchLike = async (input, init) => {
+      requests.push({ url: String(input), method: init?.method ?? 'GET' })
+      return response([{ id: 1, name: 'beta', public: true, allow_self_set: true, allowSelfSet: true }])
+    }
+
+    const client = createCodePushGoClient({
+      appId: 'com.example.app',
+      endpoint: 'https://api.test/',
+      platform: 'ios',
+      currentVersion: '1.0.0',
+      channel: 'production',
+      deviceId: 'device-1',
+      pluginVersion: '0.2.0',
+      fetch: fetcher,
+    })
+
+    await expect(client.listChannels()).resolves.toEqual([
+      expect.objectContaining({ name: 'beta', allow_self_set: true, allowSelfSet: true }),
+    ])
+    const url = new URL(requests[0].url)
+    expect(requests[0].method).toBe('GET')
+    expect(url.pathname).toBe('/channel_self')
+    expect(url.searchParams.get('app_id')).toBe('com.example.app')
+    expect(url.searchParams.get('bundle_id')).toBe('com.example.app')
+    expect(url.searchParams.get('device_id')).toBe('device-1')
+    expect(url.searchParams.get('platform')).toBe('ios')
+    expect(url.searchParams.get('version_name')).toBe('1.0.0')
+    expect(url.searchParams.get('plugin_version')).toBe('0.2.0')
+    expect(url.searchParams.get('defaultChannel')).toBe('production')
+  })
+
+  it('sets, reads, and unsets the self channel through channel_self', async () => {
+    const requests: Array<{ url: string, method: string, body?: unknown }> = []
+    const fetcher: FetchLike = async (input, init) => {
+      const method = init?.method ?? 'GET'
+      requests.push({ url: String(input), method, body: init?.body ? JSON.parse(String(init.body)) : undefined })
+      if (method === 'PUT')
+        return response({ status: 'override', channel: 'beta' })
+      return response({ status: 'ok', channel: 'beta' })
+    }
+
+    const client = createCodePushGoClient({
+      appId: 'com.example.app',
+      endpoint: 'https://api.test',
+      platform: 'android',
+      currentVersion: '1.0.0',
+      deviceId: 'device-1',
+      fetch: fetcher,
+    })
+
+    await expect(client.setChannel('beta')).resolves.toMatchObject({ status: 'ok', channel: 'beta' })
+    await expect(client.getChannel()).resolves.toMatchObject({ status: 'override', channel: 'beta' })
+    await expect(client.unsetChannel()).resolves.toMatchObject({ status: 'ok' })
+
+    expect(requests[0]).toMatchObject({
+      url: 'https://api.test/channel_self',
+      method: 'POST',
+      body: expect.objectContaining({ app_id: 'com.example.app', bundle_id: 'com.example.app', device_id: 'device-1', platform: 'android', channel: 'beta' }),
+    })
+    expect(requests[1]).toMatchObject({
+      url: 'https://api.test/channel_self',
+      method: 'PUT',
+      body: expect.objectContaining({ app_id: 'com.example.app', defaultChannel: 'production' }),
+    })
+    expect(requests[2].method).toBe('DELETE')
+    const deleteUrl = new URL(requests[2].url)
+    expect(deleteUrl.pathname).toBe('/channel_self')
+    expect(deleteUrl.searchParams.get('app_id')).toBe('com.example.app')
+    expect(deleteUrl.searchParams.get('device_id')).toBe('device-1')
   })
 })

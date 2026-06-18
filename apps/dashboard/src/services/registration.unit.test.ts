@@ -238,6 +238,29 @@ describe('organization onboarding', () => {
       p_metadata: { source: 'test' },
     })
   })
+
+  it('throws the Supabase RPC error when organization onboarding fails', async () => {
+    const rpcError = new Error('rpc denied')
+    const client = { rpc: vi.fn().mockResolvedValue({ data: null, error: rpcError }) }
+
+    await expect(createOrganizationOnboarding(client as any, {
+      name: 'Acme',
+      plan: 'team',
+      billingPeriod: 'monthly',
+      metadata: {},
+    })).rejects.toThrow('rpc denied')
+  })
+
+  it('throws when organization onboarding RPC returns no row', async () => {
+    const client = { rpc: vi.fn().mockResolvedValue({ data: [], error: null }) }
+
+    await expect(createOrganizationOnboarding(client as any, {
+      name: 'Acme',
+      plan: 'team',
+      billingPeriod: 'monthly',
+      metadata: {},
+    })).rejects.toThrow('Organization was not created')
+  })
 })
 
 describe('app onboarding', () => {

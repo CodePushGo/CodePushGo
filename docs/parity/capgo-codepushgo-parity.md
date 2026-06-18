@@ -37,6 +37,7 @@ CodePushGo test count: 361
 | CLI command handlers stay out of entrypoint | pass | CLI entrypoint wires commands to handlers in src/commands.ts |
 | Capgo console shell split from page content | pass | console shell owns sidebar/navbar, app/settings layouts own tabs, reusable table components own tables, and Vue Router owns page mapping |
 | Capgo new app route present | pass | new app page creates native-bundle-id apps through a Supabase RPC and keeps CLI auto-detection as the normal path |
+| Worker and RN updater expose channel_self parity | pass | Worker supports plugin channel_self routes and RN updater can list, set, read, and unset device channel overrides |
 | Worker backend accepts bundle_id/app_id and public device endpoints | pass | Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints |
 | Capgo app info/access routes present | pass | app info and access pages are explicit routes instead of fallback overview pages |
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |

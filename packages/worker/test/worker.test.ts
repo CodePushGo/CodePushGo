@@ -201,8 +201,8 @@ describe('CodePushGo worker', () => {
       method: 'GET',
     }, env)
     expect(await channelsResponse.json()).toEqual([
-      { id: 'beta', name: 'beta', public: false, allowSelfSet: true },
-      { id: 'production', name: 'production', public: true, allowSelfSet: true },
+      { id: 'beta', name: 'beta', public: false, allow_self_set: true, allowSelfSet: true },
+      { id: 'production', name: 'production', public: true, allow_self_set: true, allowSelfSet: true },
     ])
 
     const setResponse = await app.request('https://api.test/channel_self', {

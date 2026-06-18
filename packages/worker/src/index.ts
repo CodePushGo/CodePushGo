@@ -1688,6 +1688,7 @@ function channelSelfResponse(channel: ChannelRecord) {
     id: channel.id,
     name: channel.name,
     public: channel.public,
+    allow_self_set: channel.allowSelfSet,
     allowSelfSet: channel.allowSelfSet,
   }
 }
