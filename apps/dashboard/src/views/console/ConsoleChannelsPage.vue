@@ -3,7 +3,7 @@ import { RadioTower } from 'lucide-vue-next'
 import ChannelTable from '../../components/tables/ChannelTable.vue'
 import { useConsoleStore } from '../../stores/console'
 
-const { channels } = useConsoleStore()
+const { channels, selectedAppId } = useConsoleStore()
 </script>
 
 <template>
@@ -12,6 +12,6 @@ const { channels } = useConsoleStore()
       <h2>Channels</h2>
       <RadioTower :size="18" />
     </header>
-    <ChannelTable :channels="channels" />
+    <ChannelTable :app-id="selectedAppId" :channels="channels" />
   </section>
 </template>

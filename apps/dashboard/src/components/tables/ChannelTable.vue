@@ -1,9 +1,15 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import type { ChannelRow } from '../../stores/console'
 
-defineProps<{
+const props = defineProps<{
+  appId: string
   channels: ChannelRow[]
 }>()
+
+function channelHref(channel: ChannelRow) {
+  return props.appId ? `/app/${encodeURIComponent(props.appId)}/channel/${encodeURIComponent(channel.name)}` : '#'
+}
 
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : '-'
@@ -24,7 +30,11 @@ function formatDate(value?: string | null) {
       </thead>
       <tbody>
         <tr v-for="channel in channels" :key="`${channel.app_id}-${channel.name}`">
-          <td>{{ channel.name }}</td>
+          <th scope="row">
+            <RouterLink :to="channelHref(channel)">
+              {{ channel.name }}
+            </RouterLink>
+          </th>
           <td>{{ [channel.ios ? 'iOS' : '', channel.android ? 'Android' : '', channel.electron ? 'Electron' : ''].filter(Boolean).join(' / ') || '-' }}</td>
           <td>{{ channel.public ? 'Yes' : 'No' }}</td>
           <td>{{ channel.allow_self_set ? 'Yes' : 'No' }}</td>

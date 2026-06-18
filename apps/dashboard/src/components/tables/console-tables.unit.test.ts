@@ -17,6 +17,12 @@ describe('[Capgo parity] console table components', () => {
       expect(source(path)).toContain(label)
     })
 
+    const channelTable = source('apps/dashboard/src/components/tables/ChannelTable.vue')
+    expect(channelTable).toContain('RouterLink')
+    expect(channelTable).toContain('appId: string')
+    expect(channelTable).toContain('function channelHref')
+    expect(channelTable).toContain('/channel/')
+
     const pageFiles = [
       'apps/dashboard/src/views/console/ConsoleBundlesPage.vue',
       'apps/dashboard/src/views/console/ConsoleChannelsPage.vue',
