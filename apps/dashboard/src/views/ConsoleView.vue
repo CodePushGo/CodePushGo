@@ -1,17 +1,13 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { RouterView, useRouter } from 'vue-router'
 import { CheckCircle2, Copy, Loader2 } from 'lucide-vue-next'
+import type { ConsoleSection } from '../services/consoleRoute'
 import Steps from '../components/onboarding/Steps.vue'
 import ConsoleLayout from '../layouts/ConsoleLayout.vue'
 import { useConsoleStore } from '../stores/console'
-import ConsoleApiKeysPage from './console/ConsoleApiKeysPage.vue'
-import ConsoleAppOverviewPage from './console/ConsoleAppOverviewPage.vue'
-import ConsoleBundlesPage from './console/ConsoleBundlesPage.vue'
-import ConsoleChannelsPage from './console/ConsoleChannelsPage.vue'
-import ConsoleDevicesPage from './console/ConsoleDevicesPage.vue'
-import ConsoleHomePage from './console/ConsoleHomePage.vue'
-import ConsoleSettingsPage from './console/ConsoleSettingsPage.vue'
-import ConsoleStatsPage from './console/ConsoleStatsPage.vue'
+
+const router = useRouter()
 const consoleStore = useConsoleStore()
 const {
   appMenuOpen,
@@ -42,6 +38,9 @@ const {
   uploadCommand,
   user,
 } = consoleStore
+function navigateConsole(section: ConsoleSection, appId?: string) {
+  navigate(section, appId, href => void router.push(href))
+}
 
 onMounted(async () => {
   window.addEventListener('popstate', () => {
@@ -67,7 +66,7 @@ onMounted(async () => {
     @close-sidebar="sidebarOpen = false"
     @toggle-sidebar="sidebarOpen = !sidebarOpen"
     @toggle-app-menu="appMenuOpen = !appMenuOpen"
-    @navigate="navigate"
+    @navigate="navigateConsole"
     @sign-out="signOut"
     @refresh="refresh"
     @upload="copyCommand(uploadCommand)"
@@ -113,15 +112,7 @@ onMounted(async () => {
         </button>
       </section>
 
-      <ConsoleHomePage v-if="section === 'home'" />
-      <ConsoleAppOverviewPage v-else-if="section === 'overview'" />
-      <ConsoleBundlesPage v-else-if="section === 'releases'" />
-
-      <ConsoleChannelsPage v-else-if="section === 'channels'" />
-      <ConsoleDevicesPage v-else-if="section === 'devices'" />
-      <ConsoleStatsPage v-else-if="section === 'stats'" />
-      <ConsoleApiKeysPage v-else-if="section === 'api-keys'" />
-      <ConsoleSettingsPage v-else-if="section === 'settings'" />
+      <RouterView />
     </template>
   </ConsoleLayout>
 </template>

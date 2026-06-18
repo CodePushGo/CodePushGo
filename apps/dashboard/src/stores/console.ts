@@ -147,12 +147,12 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
     },
   ])
 
-  function navigate(target: ConsoleSection, appId = selectedAppId.value) {
+  function navigate(target: ConsoleSection, appId = selectedAppId.value, goTo: (href: string) => void = href => deps.history.pushState({}, '', href)) {
     section.value = target
     if (appId)
       selectedAppId.value = appId
     const href = target === 'home' ? '/app/home' : target === 'api-keys' ? '/dashboard/apikeys' : target === 'settings' ? '/dashboard/settings/plans' : appHref(appId, target)
-    deps.history.pushState({}, '', href)
+    goTo(href)
     sidebarOpen.value = false
     appMenuOpen.value = false
   }
@@ -281,6 +281,9 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
 
   function syncPath(pathname = deps.location.pathname) {
     section.value = pathSection(pathname)
+    const pathAppId = appIdFromPath(pathname)
+    if (pathAppId)
+      selectedAppId.value = pathAppId
   }
 
   watch(selectedAppId, () => {
