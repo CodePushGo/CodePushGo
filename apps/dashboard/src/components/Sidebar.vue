@@ -117,7 +117,7 @@ function initials(value?: string) {
         <KeyRound :size="22" />
         <span>API Keys</span>
       </a>
-      <a href="/dashboard/settings/plans" :class="{ active: currentSection === 'settings' }" @click.prevent="emit('navigate', 'settings')">
+      <a href="/settings/organization/plans" :class="{ active: currentSection === 'settings' }" @click.prevent="emit('navigate', 'settings')">
         <Settings :size="22" />
         <span>Settings</span>
       </a>

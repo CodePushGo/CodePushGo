@@ -38,10 +38,10 @@ CodePushGo test count: 360
 | CLI defaults app identity to detected RN bundle id | pass | init/resolve path uses detected React Native bundle id and auto-syncs when authenticated |
 | Worker backend accepts bundle_id/app_id and public device endpoints | pass | Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints |
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
+| Capgo canonical app routes present | pass | app URLs are generated as /app/:nativeBundleId and legacy package URLs are redirects only |
+| Capgo console shell split from page content | pass | console shell owns sidebar/navbar, app/settings layouts own tabs, and Vue Router owns page mapping |
 | Capgo protected auth guard and organization onboarding present | pass | protected routes hydrate Supabase auth, load member orgs through RLS, redirect no-org users to organization onboarding, and record plan intent there |
 | Capgo console shared store present | pass | console auth, app selection, refresh, plan intent, and command state live outside the page view |
-| Capgo canonical app routes present | pass | app URLs are generated as /app/:nativeBundleId and legacy package URLs are redirects only |
-| Capgo console shell split from page content | pass | console shell owns sidebar/navbar and RouterView while route helpers and Vue Router own page mapping |
 | no Supabase Edge Functions | pass | repo has only consolidated migration and Worker storage adapters |
 | Capgo Vue Router shell installed | pass | dashboard uses Vue Router, RouterView, module installs, and Capgo-style canonical redirects |
 | Vue dashboard remains Vue 3 | pass | dashboard package uses Vue and App.vue exists |

@@ -4,11 +4,13 @@ import { canonicalRedirects, guestPath } from './routeSurface'
 import ConfirmSignupView from './views/ConfirmSignupView.vue'
 import ConsoleView from './views/ConsoleView.vue'
 import ConsoleApiKeysPage from './views/console/ConsoleApiKeysPage.vue'
+import ConsoleAppLayout from './layouts/ConsoleAppLayout.vue'
 import ConsoleAppOverviewPage from './views/console/ConsoleAppOverviewPage.vue'
 import ConsoleBundlesPage from './views/console/ConsoleBundlesPage.vue'
 import ConsoleChannelsPage from './views/console/ConsoleChannelsPage.vue'
 import ConsoleDevicesPage from './views/console/ConsoleDevicesPage.vue'
 import ConsoleHomePage from './views/console/ConsoleHomePage.vue'
+import ConsoleSettingsLayout from './layouts/ConsoleSettingsLayout.vue'
 import ConsoleSettingsPage from './views/console/ConsoleSettingsPage.vue'
 import ConsoleStatsPage from './views/console/ConsoleStatsPage.vue'
 import ForgotPasswordView from './views/ForgotPasswordView.vue'
@@ -29,18 +31,35 @@ export const consoleRoutes: RouteRecordRaw[] = [
       { path: 'apps', component: ConsoleHomePage },
       { path: 'app/home', component: ConsoleHomePage },
       { path: 'dashboard/apikeys', component: ConsoleApiKeysPage },
-      { path: 'dashboard/settings/:pathMatch(.*)*', component: ConsoleSettingsPage },
-      { path: 'app/:appId', component: ConsoleAppOverviewPage },
-      { path: 'app/:appId/bundles', component: ConsoleBundlesPage },
-      { path: 'app/:appId/bundles/:bundle', component: ConsoleBundlesPage },
-      { path: 'app/:appId/bundle/:bundle', component: ConsoleBundlesPage },
-      { path: 'app/:appId/channels', component: ConsoleChannelsPage },
-      { path: 'app/:appId/channel/:channel', component: ConsoleChannelsPage },
-      { path: 'app/:appId/devices', component: ConsoleDevicesPage },
-      { path: 'app/:appId/device/:device', component: ConsoleDevicesPage },
-      { path: 'app/:appId/stats', component: ConsoleStatsPage },
-      { path: 'app/:appId/logs', component: ConsoleStatsPage },
-      { path: 'app/:appId/:pathMatch(.*)*', component: ConsoleAppOverviewPage },
+      { path: 'dashboard/settings/:pathMatch(.*)*', redirect: '/settings/organization/plans' },
+      {
+        path: 'settings',
+        component: ConsoleSettingsLayout,
+        children: [
+          { path: '', redirect: '/settings/organization' },
+          { path: 'account', component: ConsoleSettingsPage },
+          { path: 'account/:pathMatch(.*)*', component: ConsoleSettingsPage },
+          { path: 'organization', component: ConsoleSettingsPage },
+          { path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage },
+        ],
+      },
+      {
+        path: 'app/:appId',
+        component: ConsoleAppLayout,
+        children: [
+          { path: '', component: ConsoleAppOverviewPage },
+          { path: 'bundles', component: ConsoleBundlesPage },
+          { path: 'bundles/:bundle', component: ConsoleBundlesPage },
+          { path: 'bundle/:bundle', component: ConsoleBundlesPage },
+          { path: 'channels', component: ConsoleChannelsPage },
+          { path: 'channel/:channel', component: ConsoleChannelsPage },
+          { path: 'devices', component: ConsoleDevicesPage },
+          { path: 'device/:device', component: ConsoleDevicesPage },
+          { path: 'stats', component: ConsoleStatsPage },
+          { path: 'logs', component: ConsoleStatsPage },
+          { path: ':pathMatch(.*)*', component: ConsoleAppOverviewPage },
+        ],
+      },
     ],
   },
 ]

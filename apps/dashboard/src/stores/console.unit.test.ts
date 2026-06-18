@@ -74,6 +74,23 @@ describe('[Capgo parity] console store', () => {
     expect(store.appMenuOpen.value).toBe(false)
   })
 
+  it('navigates settings through the Capgo-style organization settings route', () => {
+    const pushState = vi.fn()
+    const store = createConsoleStore({
+      client: client() as any,
+      location: { pathname: '/app/home', search: '' } as any,
+      history: { pushState },
+      navigator: { clipboard: { writeText: vi.fn() } } as any,
+      setTimeout: vi.fn() as any,
+      redirect: vi.fn(),
+    })
+
+    store.navigate('settings')
+
+    expect(store.section.value).toBe('settings')
+    expect(pushState).toHaveBeenCalledWith({}, '', '/settings/organization/plans')
+  })
+
   it('redirects unauthenticated users to login', async () => {
     const redirect = vi.fn()
     const store = createConsoleStore({

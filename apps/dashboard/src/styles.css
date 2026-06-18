@@ -1427,6 +1427,51 @@ th {
   gap: 24px;
 }
 
+.console-route-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.console-tabs {
+  width: min(100% - 48px, 1480px);
+  margin: 0 auto;
+  display: grid;
+  gap: 8px;
+}
+
+.console-tabs-row {
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.console-tabs-row a {
+  min-height: 42px;
+  flex: 0 0 auto;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.console-tabs-row a.active,
+.console-tabs-row a:hover {
+  border-bottom-color: #116149;
+  color: #116149;
+}
+
+.secondary-tabs a {
+  min-height: 36px;
+  font-size: 13px;
+}
+
 .welcome-banner {
   position: relative;
   min-height: 132px;

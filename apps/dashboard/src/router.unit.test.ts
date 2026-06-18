@@ -12,16 +12,19 @@ describe('[Capgo parity] Vue Router console pages', () => {
     expect(routerSource).toContain("meta: { middleware: 'auth' }")
   })
 
-  it('maps canonical console paths to dedicated page components', () => {
+  it('maps canonical console paths through dedicated route layouts and page components', () => {
     expect(routerSource).toContain("{ path: 'apps', component: ConsoleHomePage }")
     expect(routerSource).toContain("{ path: 'app/home', component: ConsoleHomePage }")
-    expect(routerSource).toContain("{ path: 'app/:appId', component: ConsoleAppOverviewPage }")
-    expect(routerSource).toContain("{ path: 'app/:appId/bundles', component: ConsoleBundlesPage }")
-    expect(routerSource).toContain("{ path: 'app/:appId/channels', component: ConsoleChannelsPage }")
-    expect(routerSource).toContain("{ path: 'app/:appId/devices', component: ConsoleDevicesPage }")
-    expect(routerSource).toContain("{ path: 'app/:appId/stats', component: ConsoleStatsPage }")
+    expect(routerSource).toContain('component: ConsoleAppLayout')
+    expect(routerSource).toContain("{ path: '', component: ConsoleAppOverviewPage }")
+    expect(routerSource).toContain("{ path: 'bundles', component: ConsoleBundlesPage }")
+    expect(routerSource).toContain("{ path: 'channels', component: ConsoleChannelsPage }")
+    expect(routerSource).toContain("{ path: 'devices', component: ConsoleDevicesPage }")
+    expect(routerSource).toContain("{ path: 'logs', component: ConsoleStatsPage }")
     expect(routerSource).toContain("{ path: 'dashboard/apikeys', component: ConsoleApiKeysPage }")
-    expect(routerSource).toContain("{ path: 'dashboard/settings/:pathMatch(.*)*', component: ConsoleSettingsPage }")
+    expect(routerSource).toContain('component: ConsoleSettingsLayout')
+    expect(routerSource).toContain("{ path: 'dashboard/settings/:pathMatch(.*)*', redirect: '/settings/organization/plans' }")
+    expect(routerSource).toContain("{ path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage }")
   })
 
   it('does not register broad top-level console catchalls before page routes', () => {

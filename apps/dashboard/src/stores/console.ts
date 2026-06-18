@@ -151,7 +151,7 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
     section.value = target
     if (appId)
       selectedAppId.value = appId
-    const href = target === 'home' ? '/app/home' : target === 'api-keys' ? '/dashboard/apikeys' : target === 'settings' ? '/dashboard/settings/plans' : appHref(appId, target)
+    const href = target === 'home' ? '/app/home' : target === 'api-keys' ? '/dashboard/apikeys' : target === 'settings' ? '/settings/organization/plans' : appHref(appId, target)
     goTo(href)
     sidebarOpen.value = false
     appMenuOpen.value = false
