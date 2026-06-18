@@ -1,3 +1,4 @@
+import type { User } from '@supabase/supabase-js'
 import { reactive, readonly } from 'vue'
 import { findBestPlan, getAllDashboard, getTotalStorage, normalizeDashboardDateRange, type DashboardBucket } from '../services/supabase'
 
@@ -8,6 +9,8 @@ function lastCompleteBucket(buckets: DashboardBucket[]) {
 }
 
 const state = reactive({
+  auth: undefined as User | undefined,
+  user: undefined as User | Record<string, unknown> | undefined,
   bestPlan: null as string | null,
   totalDevices: 0,
   totalDownload: 0,
@@ -31,6 +34,10 @@ export function useMainStore() {
 
   return {
     state: readonly(state),
+    get auth() { return state.auth },
+    set auth(value: User | undefined) { state.auth = value },
+    get user() { return state.user },
+    set user(value: User | Record<string, unknown> | undefined) { state.user = value },
     get bestPlan() { return state.bestPlan },
     get totalDevices() { return state.totalDevices },
     get totalDownload() { return state.totalDownload },

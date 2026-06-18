@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  createOrganizationOnboarding,
   completePasswordReset,
   getRegistrationConfig,
   normalizeBillingPeriod,
@@ -164,6 +165,7 @@ describe('forgot password flow', () => {
     expect(updateUser).toHaveBeenCalledWith({ password: 'new-password' })
     expect(signOut).toHaveBeenCalledWith({ scope: 'others' })
   })
+})
 
 describe('resend signup email flow', () => {
   it('uses Supabase signup resend with the normalized email', async () => {
@@ -177,7 +179,6 @@ describe('resend signup email flow', () => {
       email: 'user@example.com',
     })
   })
-})
 })
 
 describe('console onboarding plan intent', () => {
@@ -214,5 +215,26 @@ describe('console onboarding plan intent', () => {
       billing_period: 'yearly',
       source: 'console_onboarding',
     }))
+  })
+})
+
+describe('organization onboarding', () => {
+  it('creates the organization through the Capgo-style onboarding RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: [{ id: 'org_1', name: 'Acme' }], error: null })
+    const client = { rpc }
+
+    await expect(createOrganizationOnboarding(client as any, {
+      name: ' Acme ',
+      plan: 'Team',
+      billingPeriod: 'yearly',
+      metadata: { source: 'test' },
+    })).resolves.toEqual({ id: 'org_1', name: 'Acme' })
+
+    expect(rpc).toHaveBeenCalledWith('create_organization_onboarding', {
+      p_name: 'Acme',
+      p_plan: 'team',
+      p_billing_period: 'yearly',
+      p_metadata: { source: 'test' },
+    })
   })
 })

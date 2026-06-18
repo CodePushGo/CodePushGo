@@ -2,11 +2,11 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 358
+CodePushGo test count: 359
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 224 | 236 | verified |
+| Capgo backend tests | 224 | 237 | verified |
 | Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
@@ -38,6 +38,7 @@ CodePushGo test count: 358
 | CLI defaults app identity to detected RN bundle id | pass | init/resolve path uses detected React Native bundle id and auto-syncs when authenticated |
 | Worker backend accepts bundle_id/app_id and public device endpoints | pass | Worker device contracts accept React Native bundle_id and expose update/stat/channel_self endpoints |
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
+| Capgo protected auth guard and organization onboarding present | pass | protected routes hydrate Supabase auth, load member orgs through RLS, redirect no-org users to organization onboarding, and record plan intent there |
 | Capgo console shared store present | pass | console auth, app selection, refresh, plan intent, and command state live outside the page view |
 | Capgo canonical app routes present | pass | app URLs are generated as /app/:nativeBundleId and legacy package URLs are redirects only |
 | Capgo console shell split from page content | pass | console shell owns sidebar/navbar while console route helpers own section URL mapping |

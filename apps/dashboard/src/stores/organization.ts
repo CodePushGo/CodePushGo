@@ -45,6 +45,7 @@ const state = reactive({
 })
 
 const allOrgs = new Map<string, Organization>()
+let organizationsLoad: Promise<{ data: Organization[] | null, error: unknown } | undefined> | undefined
 
 function organizationId(org: Organization) {
   return org.gid || org.id || ''
@@ -96,7 +97,6 @@ async function refreshLogoForOrg(org: Organization) {
   if (resolved.shouldSign)
     org.logo_storage_path = resolved.normalized
 }
-
 export function useOrganizationStore() {
   async function fetchOrganizations() {
     const mainStore = useMainStore() as unknown as { user?: unknown, auth?: unknown }
@@ -121,6 +121,17 @@ export function useOrganizationStore() {
       : state.organizations[0] ?? null
 
     return { data: state.organizations, error: null }
+  }
+
+  async function dedupFetchOrganizations() {
+    organizationsLoad ??= fetchOrganizations().finally(() => {
+      organizationsLoad = undefined
+    })
+    return await organizationsLoad
+  }
+
+  async function awaitInitialLoad() {
+    return await (organizationsLoad ?? dedupFetchOrganizations())
   }
 
   async function deleteOrganization(orgId: string) {
@@ -158,10 +169,13 @@ export function useOrganizationStore() {
         upsertOrganization(org)
       syncOrganizationsFromMap()
     },
+    get hasOrganizations() { return state.organizations.length > 0 },
     get currentOrganization() { return state.currentOrganization },
     set currentOrganization(value: Organization | null) { state.currentOrganization = value },
     getAllOrgs: () => allOrgs,
     fetchOrganizations,
+    dedupFetchOrganizations,
+    awaitInitialLoad,
     deleteOrganization,
     refreshOrganizationLogos,
   }

@@ -5,6 +5,7 @@ import ConfirmSignupView from './views/ConfirmSignupView.vue'
 import ConsoleView from './views/ConsoleView.vue'
 import ForgotPasswordView from './views/ForgotPasswordView.vue'
 import LoginView from './views/LoginView.vue'
+import OrganizationOnboardingView from './views/OrganizationOnboardingView.vue'
 import RegisterView from './views/RegisterView.vue'
 import ResendEmailView from './views/ResendEmailView.vue'
 import SsoCallbackView from './views/SsoCallbackView.vue'
@@ -16,6 +17,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
   { path: '/apps', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/dashboard/apikeys', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/dashboard/settings/:pathMatch(.*)*', component: ConsoleView, meta: { middleware: 'auth' } },
+  { path: '/onboarding/organization', component: OrganizationOnboardingView, meta: { middleware: 'auth' } },
   { path: '/app/home', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/app/:appId/:pathMatch(.*)*', component: ConsoleView, meta: { middleware: 'auth' } },
   { path: '/login', component: LoginView, meta: { layout: 'naked' } },

@@ -1652,6 +1652,84 @@ GRANT INSERT ON TABLE public.plan_intents TO anon;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.plan_intents TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.plan_intents TO service_role;
 
+CREATE OR REPLACE FUNCTION public.create_organization_onboarding(
+  p_name TEXT,
+  p_plan TEXT DEFAULT 'trial',
+  p_billing_period TEXT DEFAULT 'monthly',
+  p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS TABLE (id TEXT, name TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_user_id UUID;
+  v_email TEXT;
+  v_org_id TEXT;
+  v_name TEXT;
+  v_plan TEXT;
+  v_billing_period TEXT;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'authentication required';
+  END IF;
+
+  v_name := btrim(COALESCE(p_name, ''));
+  IF v_name = '' THEN
+    RAISE EXCEPTION 'organization name is required';
+  END IF;
+
+  v_plan := lower(btrim(COALESCE(p_plan, 'trial')));
+  IF v_plan !~ '^[a-z0-9_-]+$' THEN
+    v_plan := 'trial';
+  END IF;
+
+  v_billing_period := lower(btrim(COALESCE(p_billing_period, 'monthly')));
+  IF v_billing_period NOT IN ('monthly', 'yearly') THEN
+    v_billing_period := 'monthly';
+  END IF;
+
+  v_email := lower(COALESCE(auth.jwt() ->> 'email', ''));
+  v_org_id := gen_random_uuid()::text;
+
+  INSERT INTO public.users (id, email, first_name, last_name, enable_notifications, opt_for_newsletters, updated_at)
+  VALUES (v_user_id::text, v_email, '', '', true, true, now())
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email,
+      updated_at = EXCLUDED.updated_at;
+
+  INSERT INTO public.orgs (id, name, management_email, created_by, customer_id)
+  VALUES (v_org_id, v_name, NULLIF(v_email, ''), v_user_id::text, 'pending_' || v_org_id);
+
+  INSERT INTO public.org_users (user_id, org_id, user_right, rbac_role_name)
+  VALUES (v_user_id::text, v_org_id, 'super_admin', 'org_super_admin')
+  ON CONFLICT (user_id, org_id) DO UPDATE
+  SET user_right = EXCLUDED.user_right,
+      rbac_role_name = EXCLUDED.rbac_role_name;
+
+  INSERT INTO public.plan_intents (user_id, email, first_name, last_name, plan, billing_period, source, metadata)
+  VALUES (
+    v_user_id,
+    v_email,
+    NULL,
+    NULL,
+    v_plan,
+    v_billing_period,
+    'organization_onboarding',
+    COALESCE(p_metadata, '{}'::jsonb) || jsonb_build_object('organization_id', v_org_id)
+  );
+
+  RETURN QUERY SELECT v_org_id, v_name;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, JSONB) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_organization_onboarding(TEXT, TEXT, TEXT, JSONB) TO service_role;
+
 
 DROP POLICY IF EXISTS org_users_read_own_membership ON public.org_users;
 CREATE POLICY org_users_read_own_membership

@@ -32,6 +32,18 @@ export interface PlanIntentInput {
   metadata?: Record<string, unknown>
 }
 
+export interface OrganizationOnboardingInput {
+  name: string
+  plan: string
+  billingPeriod: 'monthly' | 'yearly'
+  metadata?: Record<string, unknown>
+}
+
+export interface OrganizationOnboardingResult {
+  id: string
+  name: string
+}
+
 export interface ConsoleAppRecord {
   app_id: string
   name: string
@@ -281,4 +293,22 @@ export async function recordPlanIntent(client: SupabaseClient, user: User, input
     throw error
 
   return data
+}
+
+export async function createOrganizationOnboarding(client: SupabaseClient, input: OrganizationOnboardingInput): Promise<OrganizationOnboardingResult> {
+  const { data, error } = await client.rpc('create_organization_onboarding', {
+    p_name: input.name.trim(),
+    p_plan: normalizePlan(input.plan),
+    p_billing_period: input.billingPeriod,
+    p_metadata: input.metadata ?? {},
+  })
+
+  if (error)
+    throw error
+
+  const [organization] = (data ?? []) as OrganizationOnboardingResult[]
+  if (!organization)
+    throw new Error('Organization was not created')
+
+  return organization
 }
