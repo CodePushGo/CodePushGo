@@ -2,11 +2,11 @@
 
 Capgo source: /tmp/capgo-current
 Capacitor updater source: /tmp/capacitor-updater-current
-CodePushGo test count: 365
+CodePushGo test count: 367
 
 | Suite | Source tests/flows | CodePushGo matching files | Status |
 | --- | ---: | ---: | --- |
-| Capgo backend tests | 224 | 243 | verified |
+| Capgo backend tests | 224 | 245 | verified |
 | Capgo CLI tests | 115 | 120 | verified |
 | Capacitor updater native contract tests | 2 | 2 | verified |
 | Capacitor updater Maestro native flows | 39 | 0 | not applicable |
@@ -35,6 +35,7 @@ CodePushGo test count: 365
 | --- | --- | --- |
 | monorepo packages present | pass | root workspaces include apps and packages |
 | CLI command handlers stay out of entrypoint | pass | CLI entrypoint wires commands to handlers in src/commands.ts |
+| Capgo organization members console route present | pass | organization members are mounted as a dedicated settings route, backed by the Worker organization members API, and tied to the consolidated Supabase org_users migration |
 | Capgo console shell split from page content | pass | console shell owns sidebar/navbar, app/settings layouts own tabs, reusable table components own tables, and Vue Router owns page mapping |
 | Capgo organization webhooks console route present | pass | organization webhooks are mounted as a dedicated settings route and use the Cloudflare Worker webhook API instead of Supabase Edge Functions |
 | Capgo new app route present | pass | new app page creates native-bundle-id apps through a Supabase RPC and keeps CLI auto-detection as the normal path |

@@ -47,8 +47,11 @@ describe('[Capgo parity] Vue Router console pages', () => {
     expect(routerSource).toContain('component: ConsoleSettingsLayout')
     expect(routerSource).toContain("{ path: 'dashboard/settings/:pathMatch(.*)*', redirect: '/settings/organization/plans' }")
     expect(routerSource).toContain('ConsoleOrganizationWebhooksPage')
+    expect(routerSource).toContain('ConsoleOrganizationMembersPage')
     expect(routerSource).toContain("{ path: 'organization/webhooks', component: ConsoleOrganizationWebhooksPage }")
+    expect(routerSource).toContain("{ path: 'organization/members', component: ConsoleOrganizationMembersPage }")
     expect(routerSource.indexOf("{ path: 'organization/webhooks', component: ConsoleOrganizationWebhooksPage }")).toBeLessThan(routerSource.indexOf("{ path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage }"))
+    expect(routerSource.indexOf("{ path: 'organization/members', component: ConsoleOrganizationMembersPage }")).toBeLessThan(routerSource.indexOf("{ path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage }"))
   })
 
   it('does not register broad top-level console catchalls before page routes', () => {

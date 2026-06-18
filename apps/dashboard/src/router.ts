@@ -19,6 +19,7 @@ import ConsoleHomePage from './views/console/ConsoleHomePage.vue'
 import ConsoleNewAppPage from './views/console/ConsoleNewAppPage.vue'
 import ConsoleSettingsLayout from './layouts/ConsoleSettingsLayout.vue'
 import ConsoleSettingsPage from './views/console/ConsoleSettingsPage.vue'
+import ConsoleOrganizationMembersPage from './views/console/ConsoleOrganizationMembersPage.vue'
 import ConsoleOrganizationWebhooksPage from './views/console/ConsoleOrganizationWebhooksPage.vue'
 import ConsoleStatsPage from './views/console/ConsoleStatsPage.vue'
 import ForgotPasswordView from './views/ForgotPasswordView.vue'
@@ -48,6 +49,7 @@ export const consoleRoutes: RouteRecordRaw[] = [
           { path: '', redirect: '/settings/organization' },
           { path: 'account', component: ConsoleSettingsPage },
           { path: 'account/:pathMatch(.*)*', component: ConsoleSettingsPage },
+          { path: 'organization/members', component: ConsoleOrganizationMembersPage },
           { path: 'organization/webhooks', component: ConsoleOrganizationWebhooksPage },
           { path: 'organization', component: ConsoleSettingsPage },
           { path: 'organization/:pathMatch(.*)*', component: ConsoleSettingsPage },
