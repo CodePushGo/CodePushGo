@@ -1,0 +1,6 @@
+export const authPrimaryButtonClass = 'auth-primary-button'
+export const authSecondaryButtonClass = 'auth-secondary-button'
+export const authInlineLinkClass = 'auth-inline-link'
+export const authGhostButtonClass = 'auth-ghost-button'
+export const authPanelClass = 'auth-panel-row'
+export const authInsetCardClass = 'auth-inset-card'
