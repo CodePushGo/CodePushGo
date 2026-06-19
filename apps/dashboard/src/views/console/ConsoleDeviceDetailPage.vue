@@ -17,7 +17,7 @@ const {
 
 const routeDeviceId = computed(() => String(route.params.device || ''))
 const decodedDeviceId = computed(() => decodeURIComponent(routeDeviceId.value))
-const device = computed(() => devices.value.find(row => row.device_id === decodedDeviceId.value || row.custom_id === decodedDeviceId.value))
+const device = computed(() => devices.value.find(row => String((row as typeof row & { id?: number | string }).id || '') === decodedDeviceId.value) || devices.value.find(row => row.device_id === decodedDeviceId.value || row.custom_id === decodedDeviceId.value))
 const deviceOverride = computed(() => deviceChannels.value.find(row => row.device_id === device.value?.device_id))
 const effectiveChannel = computed(() => deviceOverride.value?.channel || device.value?.default_channel || '')
 const deviceStats = computed(() => appStats.value.filter(stat => stat.device_id === device.value?.device_id).slice(0, 25))

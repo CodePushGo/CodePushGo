@@ -3,12 +3,14 @@ import { appHref, appIdFromPath, consoleSectionTitle, pathSection } from './cons
 
 describe('[Capgo parity] console route helpers', () => {
   it('maps console paths to sections', () => {
-    expect(pathSection('/')).toBe('home')
+    expect(pathSection('/')).toBe('dashboard')
+    expect(pathSection('/dashboard')).toBe('dashboard')
     expect(pathSection('/apps')).toBe('home')
     expect(pathSection('/app/home')).toBe('home')
     expect(pathSection('/app/new')).toBe('home')
-    expect(pathSection('/dashboard/apikeys')).toBe('api-keys')
+    expect(pathSection('/apikeys')).toBe('api-keys')
     expect(pathSection('/dashboard/settings/plans')).toBe('settings')
+    expect(pathSection('/app/p/com.test.app/builds')).toBe('builds')
     expect(pathSection('/app/p/com.test.app/bundle')).toBe('releases')
     expect(pathSection('/app/p/com.test.app/channels')).toBe('channels')
     expect(pathSection('/app/p/com.test.app/devices')).toBe('devices')
@@ -30,11 +32,15 @@ describe('[Capgo parity] console route helpers', () => {
     expect(appHref('com.example.app', 'compatibility')).toBe('/app/com.example.app/compatibility')
     expect(appHref('com.example.app', 'access')).toBe('/app/com.example.app/access')
     expect(appHref('com.example/app', 'releases')).toBe('/app/com.example%2Fapp/bundles')
+    expect(appHref('com.example.app', 'builds')).toBe('/app/com.example.app/builds')
     expect(appHref('com.example.app', 'channels')).toBe('/app/com.example.app/channels')
     expect(appHref('com.example.app')).toBe('/app/com.example.app')
   })
+
   it('keeps section titles centralized for the shell', () => {
-    expect(consoleSectionTitle('home')).toBe('Dashboard')
+    expect(consoleSectionTitle('dashboard')).toBe('Dashboard')
+    expect(consoleSectionTitle('home')).toBe('Apps')
+    expect(consoleSectionTitle('builds')).toBe('Builds')
     expect(consoleSectionTitle('releases')).toBe('Bundles')
     expect(consoleSectionTitle('compatibility')).toBe('Compatibility')
     expect(consoleSectionTitle('info')).toBe('Info')

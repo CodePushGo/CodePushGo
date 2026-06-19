@@ -8,6 +8,7 @@ import ConsoleAppLayout from './layouts/ConsoleAppLayout.vue'
 import ConsoleAppAccessPage from './views/console/ConsoleAppAccessPage.vue'
 import ConsoleAppInfoPage from './views/console/ConsoleAppInfoPage.vue'
 import ConsoleAppOverviewPage from './views/console/ConsoleAppOverviewPage.vue'
+import ConsoleBuildsPage from './views/console/ConsoleBuildsPage.vue'
 import ConsoleBundlesPage from './views/console/ConsoleBundlesPage.vue'
 import ConsoleBundleDetailPage from './views/console/ConsoleBundleDetailPage.vue'
 import ConsoleChannelsPage from './views/console/ConsoleChannelsPage.vue'
@@ -31,16 +32,29 @@ import SsoCallbackView from './views/SsoCallbackView.vue'
 
 export { guestPath }
 
+const settingsFallbackRoutes = [
+  'account/notifications',
+  'account/change-password',
+  'account/manage-2fa',
+  'organization/groups',
+  'organization/credits',
+  'organization/security',
+  'organization/usage',
+  'organization/auditlogs',
+].map(path => ({ path, component: ConsoleSettingsPage }))
+
 export const consoleRoutes: RouteRecordRaw[] = [
   {
     path: '/',
     component: ConsoleView,
     meta: { middleware: 'auth' },
     children: [
+      { path: 'dashboard', component: ConsoleHomePage },
       { path: 'apps', component: ConsoleHomePage },
       { path: 'app/new', component: ConsoleNewAppPage },
-      { path: 'app/home', component: ConsoleHomePage },
+      { path: 'app/home', redirect: '/dashboard' },
       { path: 'dashboard/apikeys', component: ConsoleApiKeysPage },
+      { path: 'apikeys', redirect: '/dashboard/apikeys' },
       { path: 'dashboard/settings/:pathMatch(.*)*', redirect: '/settings/organization/plans' },
       {
         path: 'settings',
@@ -48,6 +62,7 @@ export const consoleRoutes: RouteRecordRaw[] = [
         children: [
           { path: '', redirect: '/settings/organization' },
           { path: 'account', component: ConsoleSettingsPage },
+          ...settingsFallbackRoutes,
           { path: 'account/:pathMatch(.*)*', component: ConsoleSettingsPage },
           { path: 'organization/members', component: ConsoleOrganizationMembersPage },
           { path: 'organization/webhooks', component: ConsoleOrganizationWebhooksPage },
@@ -64,6 +79,7 @@ export const consoleRoutes: RouteRecordRaw[] = [
           { path: 'access', component: ConsoleAppAccessPage },
           { path: '', component: ConsoleAppOverviewPage },
           { path: 'bundles', component: ConsoleBundlesPage },
+          { path: 'bundles/new', component: ConsoleBundlesPage },
           { path: 'bundles/:bundle', component: ConsoleBundleDetailPage },
           { path: 'bundles/:bundle/history', component: ConsoleBundleDetailPage },
           { path: 'bundles/:bundle/manifest', component: ConsoleBundleDetailPage },
@@ -83,9 +99,10 @@ export const consoleRoutes: RouteRecordRaw[] = [
           { path: 'devices', component: ConsoleDevicesPage },
           { path: 'device/:device', component: ConsoleDeviceDetailPage },
           { path: 'device/:device/deployments', component: ConsoleDeviceDetailPage },
-          { path: 'compatibility', component: ConsoleCompatibilityPage },
           { path: 'device/:device/logs', component: ConsoleDeviceDetailPage },
-          { path: 'stats', component: ConsoleStatsPage },
+          { path: 'compatibility', component: ConsoleCompatibilityPage },
+          { path: 'builds', component: ConsoleBuildsPage },
+          { path: 'stats', redirect: route => `/app/${encodeURIComponent(String(route.params.appId))}/logs` },
           { path: 'logs', component: ConsoleStatsPage },
           { path: ':pathMatch(.*)*', component: ConsoleAppOverviewPage },
         ],
@@ -104,7 +121,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
   { path: '/confirm-signup', component: ConfirmSignupView, meta: { layout: 'naked' } },
   { path: '/resend_email', component: ResendEmailView, meta: { layout: 'naked' } },
   { path: '/sso-callback', component: SsoCallbackView, meta: { layout: 'naked' } },
-  { path: '/:pathMatch(.*)*', redirect: '/app/home' },
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
 export function createDashboardRouter() {

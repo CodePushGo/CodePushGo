@@ -29,6 +29,9 @@ describe('[Capgo parity] dashboard route surface', () => {
     expect(canonicalRedirects).toEqual(expect.arrayContaining([
       { path: '/', redirect: '/login' },
       { path: '/app', redirect: '/apps' },
+      { path: '/apikeys', redirect: '/dashboard/apikeys' },
+    ]))
+    expect(canonicalRedirects).not.toEqual(expect.arrayContaining([
       { path: '/dashboard', redirect: '/app/home' },
     ]))
   })

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { Layers3, Rocket, Smartphone } from 'lucide-vue-next'
-
 defineProps<{
   devices: number
   bundles: number
@@ -19,7 +17,6 @@ defineProps<{
         <strong>{{ devices }}</strong>
         <span>recent active devices</span>
       </div>
-      <Smartphone :size="24" />
     </article>
     <article class="metric-card">
       <div>
@@ -27,7 +24,6 @@ defineProps<{
         <strong>{{ bundles }}</strong>
         <span>{{ iosBundles }} iOS / {{ androidBundles }} Android</span>
       </div>
-      <Layers3 :size="24" />
     </article>
     <article class="metric-card">
       <div>
@@ -35,7 +31,6 @@ defineProps<{
         <strong>{{ latestVersion || '-' }}</strong>
         <span>{{ latestChannel || 'no release yet' }}</span>
       </div>
-      <Rocket :size="24" />
     </article>
   </div>
 </template>

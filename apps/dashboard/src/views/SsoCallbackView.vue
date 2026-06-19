@@ -10,6 +10,12 @@ const pending = ref(true)
 const error = ref('')
 
 onMounted(async () => {
+  const query = new URLSearchParams(window.location.search)
+  if (query.get('linked') === 'true' || query.get('sso_linked') === 'true') {
+    window.location.assign('/login?sso_linked=true')
+    return
+  }
+
   const params = parseSsoCallbackParams(window.location.search, window.location.hash)
   window.history.replaceState({}, '', clearAuthParamsFromUrl(window.location.href))
 
@@ -20,7 +26,6 @@ onMounted(async () => {
   }
 
   try {
-    const query = new URLSearchParams(window.location.search)
     const result = await completeSsoCallback(client, params, query.get('to'))
     window.location.assign(result.redirectTo)
   }

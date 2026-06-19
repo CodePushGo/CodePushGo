@@ -91,7 +91,7 @@ describe('[Capgo parity] console store', () => {
     store.navigate('settings')
 
     expect(store.section.value).toBe('settings')
-    expect(pushState).toHaveBeenCalledWith({}, '', '/settings/organization/plans')
+    expect(pushState).toHaveBeenCalledWith({}, '', '/settings/organization')
   })
 
   it('redirects unauthenticated users to login', async () => {

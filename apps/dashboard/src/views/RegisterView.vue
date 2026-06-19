@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ArrowRight, CheckCircle2, Loader2, Mail, ShieldCheck, Terminal, Zap } from 'lucide-vue-next'
-import { createConfirmedAccount, createRegistrationClient, getRegistrationConfig, loginAccount } from '../services/registration'
+import { createConfirmedAccount, createRegistrationClient, getCaptchaTokenFromParams, getRegistrationConfig, loginAccount } from '../services/registration'
 
 const config = getRegistrationConfig()
 const client = createRegistrationClient(config)
 const params = new URLSearchParams(window.location.search)
+const captchaToken = getCaptchaTokenFromParams()
 
 const email = ref(params.get('email') || '')
 const firstName = ref('')
@@ -47,6 +48,7 @@ async function submit() {
       password: password.value,
       firstName: firstName.value,
       lastName: lastName.value,
+      captchaToken,
     }
     await createConfirmedAccount(input, config)
     await loginAccount(client, input)

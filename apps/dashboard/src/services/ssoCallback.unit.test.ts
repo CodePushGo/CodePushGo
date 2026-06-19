@@ -31,6 +31,10 @@ describe('[Capgo parity] SSO callback auth flow', () => {
     expect(clearAuthParamsFromUrl('https://console.codepushgo.com/sso-callback?access_token=a&refresh_token=r&code=c#access_token=ha&refresh_token=hr&next=%2Fapp%2Fhome')).toBe('https://console.codepushgo.com/sso-callback?code=c#next=%2Fapp%2Fhome')
   })
 
+  it('keeps non-auth linked callback params for the view handoff', () => {
+    expect(clearAuthParamsFromUrl('https://console.codepushgo.com/sso-callback?sso_linked=true&access_token=a#refresh_token=r')).toBe('https://console.codepushgo.com/sso-callback?sso_linked=true')
+  })
+
   it('sets a Supabase session from hash tokens', async () => {
     const setSession = vi.fn().mockResolvedValue({ data: { session: {} }, error: null })
     const exchangeCodeForSession = vi.fn().mockResolvedValue({ data: { session: {} }, error: null })

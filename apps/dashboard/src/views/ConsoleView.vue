@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
+import { onMounted, watch } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import { CheckCircle2, Copy, Loader2 } from 'lucide-vue-next'
 import type { ConsoleSection } from '../services/consoleRoute'
 import Steps from '../components/onboarding/Steps.vue'
@@ -8,9 +8,9 @@ import ConsoleLayout from '../layouts/ConsoleLayout.vue'
 import { useConsoleStore } from '../stores/console'
 
 const router = useRouter()
+const route = useRoute()
 const consoleStore = useConsoleStore()
 const {
-  appMenuOpen,
   apps,
   copyCommand,
   copiedCommand,
@@ -24,7 +24,6 @@ const {
   pageTitle,
   pending,
   planRecorded,
-  refresh,
   releaseCommand,
   savePlanIntent,
   section,
@@ -38,38 +37,33 @@ const {
   uploadCommand,
   user,
 } = consoleStore
-function navigateConsole(section: ConsoleSection, appId?: string) {
-  navigate(section, appId, href => void router.push(href))
+
+function navigateConsole(sectionName: ConsoleSection, appId?: string) {
+  navigate(sectionName, appId, href => void router.push(href))
 }
 
+watch(() => route.fullPath, () => {
+  consoleStore.syncPath(route.path)
+}, { immediate: true })
+
 onMounted(async () => {
-  window.addEventListener('popstate', () => {
-    consoleStore.syncPath()
-  })
   await consoleStore.mount()
 })
 </script>
-
 <template>
   <ConsoleLayout
     :apps="apps"
     :current-section="section"
     :selected-app-id="selectedAppId"
     :sidebar-open="sidebarOpen"
-    :app-menu-open="appMenuOpen"
     :display-name="displayName"
     :email="user?.email"
-    :pending="pending"
-    :loading="loading"
     :title="pageTitle"
     :eyebrow="pageEyebrow"
     @close-sidebar="sidebarOpen = false"
     @toggle-sidebar="sidebarOpen = !sidebarOpen"
-    @toggle-app-menu="appMenuOpen = !appMenuOpen"
     @navigate="navigateConsole"
     @sign-out="signOut"
-    @refresh="refresh"
-    @upload="copyCommand(uploadCommand)"
   >
     <p v-if="error" class="form-alert error">{{ error }}</p>
     <p v-if="notice" class="form-alert success">
@@ -101,12 +95,18 @@ onMounted(async () => {
         <div>
           <p class="eyebrow">{{ selectedApp?.app_id || 'Organization' }}</p>
           <h1>{{ pageTitle }}</h1>
-          <p v-if="section === 'home'">Manage the React Native apps connected by native bundle ID.</p>
+          <p v-if="section === 'dashboard'">Monitor your CodePushGo organization.</p>
+          <p v-else-if="section === 'home'">Manage the React Native apps connected by native bundle ID.</p>
           <p v-else-if="section === 'api-keys'">Use organization API keys with the CLI and Cloudflare Worker endpoints.</p>
           <p v-else-if="section === 'settings'">Billing, plan intent, team access, and organization defaults.</p>
           <p v-else>Manage React Native JavaScript bundles, channels, devices, and update stats.</p>
         </div>
-        <button class="primary" type="button" @click="copyCommand(section === 'releases' ? uploadCommand : releaseCommand)">
+        <button
+          v-if="section !== 'dashboard' && section !== 'home' && section !== 'api-keys' && section !== 'settings'"
+          class="primary"
+          type="button"
+          @click="copyCommand(section === 'releases' ? uploadCommand : releaseCommand)"
+        >
           <Copy :size="16" />
           {{ copiedCommand ? 'Copied' : 'Copy CLI command' }}
         </button>

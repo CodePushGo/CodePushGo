@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-vue-next'
-import { completePasswordReset, createRegistrationClient, getRegistrationConfig, parseRecoveryParams, requestPasswordReset } from '../services/registration'
+import { completePasswordReset, createRegistrationClient, getCaptchaTokenFromParams, getRegistrationConfig, parseRecoveryParams, requestPasswordReset } from '../services/registration'
 
 const config = getRegistrationConfig()
 const client = createRegistrationClient(config)
 const params = new URLSearchParams(window.location.search)
 const recoveryParams = parseRecoveryParams(window.location.search, window.location.hash)
+const captchaToken = getCaptchaTokenFromParams()
 const step = ref(params.get('step') === '2' || recoveryParams.accessToken || recoveryParams.refreshToken || recoveryParams.code ? 2 : 1)
 
 const email = ref(params.get('email') || '')
@@ -48,7 +49,7 @@ async function submit() {
   pending.value = true
   try {
     if (step.value === 1) {
-      await requestPasswordReset(client, email.value, config)
+      await requestPasswordReset(client, email.value, config, captchaToken)
       message.value = 'Check your email for the password reset link.'
       return
     }

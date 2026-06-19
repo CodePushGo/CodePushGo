@@ -72,7 +72,7 @@ const heroHighlights = computed(() => props.heroHighlights ?? [
 
           <div class="auth-hero-copy">
             <div class="auth-logo-tile">
-              <span class="mark">CG</span>
+              <img src="/codepushgo-logo.svg" alt="CodePushGo" class="auth-logo-image">
             </div>
             <div>
               <p class="auth-kicker">{{ heroKickerValue }}</p>
@@ -93,7 +93,7 @@ const heroHighlights = computed(() => props.heroHighlights ?? [
 
       <div class="auth-card-column" :class="cardWidthClass">
         <div class="auth-mobile-brand">
-          <span class="auth-mobile-mark mark">CG</span>
+          <img src="/codepushgo-logo.svg" alt="CodePushGo" class="auth-mobile-logo">
           <div>
             <p>{{ heroKickerValue }}</p>
             <strong>CodePushGo</strong>

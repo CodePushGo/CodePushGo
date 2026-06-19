@@ -2,58 +2,63 @@
 import {
   BookOpen,
   ChartNoAxesColumn,
-  ChevronDown,
-  Home,
   KeyRound,
-  Layers3,
   LogOut,
-  RadioTower,
-  Settings,
-  Smartphone,
+  MessageCircle,
+  PanelsTopLeft,
   X,
 } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import type { Component } from 'vue'
 import type { ConsoleAppRecord } from '../services/registration'
 import type { ConsoleSection } from '../services/consoleRoute'
 
-const props = defineProps<{
+defineProps<{
   apps: ConsoleAppRecord[]
   currentSection: ConsoleSection
   selectedAppId: string
   sidebarOpen: boolean
-  appMenuOpen: boolean
   displayName: string
   email?: string
 }>()
 
 const emit = defineEmits<{
   closeSidebar: []
-  toggleAppMenu: []
   navigate: [section: ConsoleSection, appId?: string]
   signOut: []
 }>()
 
 interface NavItem {
-  section: ConsoleSection
   label: string
+  href: string
   icon: Component
+  section?: ConsoleSection
+  activePaths?: string[]
 }
 
-const selectedApp = computed(() => props.apps.find(app => app.app_id === props.selectedAppId))
-const hasApps = computed(() => props.apps.length > 0)
-const appNavItems = computed<NavItem[]>(() => props.selectedAppId
-  ? [
-      { section: 'overview', label: 'Overview', icon: ChartNoAxesColumn },
-      { section: 'releases', label: 'Bundles', icon: Layers3 },
-      { section: 'channels', label: 'Channels', icon: RadioTower },
-      { section: 'devices', label: 'Devices', icon: Smartphone },
-      { section: 'stats', label: 'Stats', icon: ChartNoAxesColumn },
-    ]
-  : [])
+const route = useRoute()
+const navItems: NavItem[] = [
+  { label: 'Dashboard', href: '/dashboard', icon: ChartNoAxesColumn, section: 'home', activePaths: ['/dashboard'] },
+  { label: 'Apps', href: '/apps', icon: PanelsTopLeft, activePaths: ['/apps', '/app'] },
+  { label: 'API Keys', href: '/dashboard/apikeys', icon: KeyRound, section: 'api-keys', activePaths: ['/dashboard/apikeys', '/apikeys'] },
+]
 
-function initials(value?: string) {
-  return (value || 'RN').slice(0, 2).toUpperCase()
+const normalizedPath = computed(() => route.path.replace(/\/$/, '') || '/')
+
+function isActive(item: NavItem) {
+  return item.activePaths?.some((path) => {
+    const normalized = path.replace(/\/$/, '') || '/'
+    return normalizedPath.value === normalized || normalizedPath.value.startsWith(`${normalized}/`)
+  }) ?? false
+}
+
+function openItem(item: NavItem) {
+  if (item.section) {
+    emit('navigate', item.section)
+    return
+  }
+  emit('closeSidebar')
 }
 </script>
 
@@ -67,31 +72,10 @@ function initials(value?: string) {
         <X :size="18" />
       </button>
 
-      <a class="sidebar-logo" href="/app/home" aria-label="CodePushGo console" @click.prevent="emit('navigate', 'home')">
+      <a class="sidebar-logo" href="/dashboard" aria-label="CodePushGo console" @click.prevent="emit('navigate', 'home')">
         <img src="/favicon.svg" alt="CodePushGo logo">
         <span>CodePushGo</span>
       </a>
-    </div>
-
-    <div class="app-switcher" :class="{ disabled: !hasApps }">
-      <button type="button" :disabled="!hasApps" @click="emit('toggleAppMenu')">
-        <span class="app-icon">{{ initials(selectedApp?.name) }}</span>
-        <span>
-          <strong>{{ selectedApp?.name || 'No app yet' }}</strong>
-          <small>{{ selectedApp?.app_id || 'React Native bundle ID' }}</small>
-        </span>
-        <ChevronDown :size="16" />
-      </button>
-
-      <div v-if="appMenuOpen" class="app-switcher-menu">
-        <button v-for="app in apps" :key="app.app_id" type="button" @click="emit('navigate', 'overview', app.app_id)">
-          <span class="app-icon">{{ initials(app.name) }}</span>
-          <span>
-            <strong>{{ app.name }}</strong>
-            <small>{{ app.app_id }}</small>
-          </span>
-        </button>
-      </div>
     </div>
 
     <nav class="sidebar-nav" aria-label="Pages">
@@ -99,31 +83,23 @@ function initials(value?: string) {
         <span aria-hidden="true">...</span>
         <span>Pages</span>
       </h3>
-      <a href="/app/home" :class="{ active: currentSection === 'home' }" @click.prevent="emit('navigate', 'home')">
-        <Home :size="22" />
-        <span>Dashboard</span>
-      </a>
-      <a
-        v-for="item in appNavItems"
-        :key="item.section"
-        :href="`/app/p/${encodeURIComponent(selectedAppId)}`"
-        :class="{ active: currentSection === item.section }"
-        @click.prevent="emit('navigate', item.section)"
+      <RouterLink
+        v-for="item in navItems"
+        :key="item.href"
+        :to="item.href"
+        :class="{ active: isActive(item) }"
+        @click="openItem(item)"
       >
         <component :is="item.icon" :size="22" />
         <span>{{ item.label }}</span>
-      </a>
-      <a href="/dashboard/apikeys" :class="{ active: currentSection === 'api-keys' }" @click.prevent="emit('navigate', 'api-keys')">
-        <KeyRound :size="22" />
-        <span>API Keys</span>
-      </a>
-      <a href="/settings/organization/plans" :class="{ active: currentSection === 'settings' }" @click.prevent="emit('navigate', 'settings')">
-        <Settings :size="22" />
-        <span>Settings</span>
-      </a>
+      </RouterLink>
       <a href="https://codepushgo.com/docs/" target="_blank" rel="noopener">
         <BookOpen :size="22" />
         <span>Documentation</span>
+      </a>
+      <a href="https://discord.gg/codepushgo" target="_blank" rel="noopener">
+        <MessageCircle :size="22" />
+        <span>Discord</span>
       </a>
     </nav>
 

@@ -113,7 +113,7 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
   const selectedApp = computed(() => apps.value.find(app => app.app_id === selectedAppId.value))
   const hasApps = computed(() => apps.value.length > 0)
   const showOnboarding = computed(() => !loading.value && !hasApps.value)
-  const isAppScoped = computed(() => section.value !== 'home' && section.value !== 'api-keys' && section.value !== 'settings')
+  const isAppScoped = computed(() => section.value !== 'dashboard' && section.value !== 'home' && section.value !== 'api-keys' && section.value !== 'settings')
   const pageTitle = computed(() => consoleSectionTitle(section.value, showOnboarding.value))
   const pageEyebrow = computed(() => isAppScoped.value ? selectedApp.value?.name || 'App' : 'CodePushGo')
   const displayName = computed(() => {
@@ -160,7 +160,7 @@ export function createConsoleStore(inputDeps: ConsoleStoreDeps = {}) {
     section.value = target
     if (appId)
       selectedAppId.value = appId
-    const href = target === 'home' ? '/app/home' : target === 'api-keys' ? '/dashboard/apikeys' : target === 'settings' ? '/settings/organization/plans' : appHref(appId, target)
+    const href = target === 'home' ? '/dashboard' : target === 'api-keys' ? '/apikeys' : target === 'settings' ? '/settings/organization' : appHref(appId, target)
     goTo(href)
     sidebarOpen.value = false
     appMenuOpen.value = false

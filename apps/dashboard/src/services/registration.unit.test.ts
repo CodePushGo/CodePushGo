@@ -1,18 +1,31 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  bootstrapAuthSession,
   completePasswordReset,
   createAppOnboarding,
   createOrganizationOnboarding,
   createRegistrationClient,
+  getCaptchaTokenFromParams,
   getRegistrationConfig,
+  loginAccount,
   normalizeBillingPeriod,
   normalizePlan,
+  normalizeRelativeReturnTo,
   parseRecoveryParams,
   recordPlanIntent,
   registerAccount,
   requestPasswordReset,
   resendSignupEmail,
+  verifyLoginMfa,
 } from './registration'
+
+const testConfig = {
+  supabaseUrl: 'https://umpxowxnwroafuzynvwf.supabase.co',
+  supabaseAnonKey: 'publishable',
+  consoleUrl: 'https://console.codepushgo.com/',
+  apiUrl: 'https://api.codepushgo.com',
+  enabled: true,
+}
 
 describe('registration config', () => {
   it('derives the Supabase URL from the CodePushGo project ref', () => {
@@ -47,7 +60,7 @@ describe('createConfirmedAccount', () => {
       password: 'password123',
       firstName: ' Ada ',
       lastName: ' Lovelace ',
-    }, { supabaseUrl: '', supabaseAnonKey: '', consoleUrl: '', apiUrl: 'https://api.test/', enabled: true })
+    }, { ...testConfig, apiUrl: 'https://api.test/' })
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.test/auth/signup', expect.objectContaining({
       method: 'POST',
@@ -56,6 +69,31 @@ describe('createConfirmedAccount', () => {
         password: 'password123',
         first_name: 'Ada',
         last_name: 'Lovelace',
+      }),
+    }))
+    vi.unstubAllGlobals()
+  })
+
+  it('passes captcha tokens through the Worker signup endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'ok' }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { createConfirmedAccount } = await import('./registration')
+    await createConfirmedAccount({
+      email: 'user@example.com',
+      password: 'password123',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      captchaToken: 'captcha-token',
+    }, { ...testConfig, apiUrl: 'https://api.test/' })
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.test/auth/signup', expect.objectContaining({
+      body: JSON.stringify({
+        email: 'user@example.com',
+        password: 'password123',
+        first_name: 'Ada',
+        last_name: 'Lovelace',
+        captcha_token: 'captcha-token',
       }),
     }))
     vi.unstubAllGlobals()
@@ -101,18 +139,71 @@ describe('registerAccount', () => {
   })
 })
 
+describe('login MFA flow', () => {
+  it('returns ok when password login produces a session', async () => {
+    const signInWithPassword = vi.fn().mockResolvedValue({ data: { session: { access_token: 'token' } }, error: null })
+    const client = { auth: { signInWithPassword } }
+
+    await expect(loginAccount(client as any, { email: ' User@Example.com ', password: 'password123' })).resolves.toEqual({ status: 'ok' })
+    expect(signInWithPassword).toHaveBeenCalledWith({ email: 'user@example.com', password: 'password123' })
+  })
+
+  it('challenges the first verified MFA factor when AAL2 is required', async () => {
+    const signInWithPassword = vi.fn().mockResolvedValue({ data: { session: null }, error: null })
+    const getAuthenticatorAssuranceLevel = vi.fn().mockResolvedValue({ data: { currentLevel: 'aal1', nextLevel: 'aal2' }, error: null })
+    const listFactors = vi.fn().mockResolvedValue({ data: { all: [{ id: 'factor_1', status: 'verified' }] }, error: null })
+    const challenge = vi.fn().mockResolvedValue({ data: { id: 'challenge_1' }, error: null })
+    const client = { auth: { signInWithPassword, mfa: { getAuthenticatorAssuranceLevel, listFactors, challenge } } }
+
+    await expect(loginAccount(client as any, { email: 'user@example.com', password: 'password123' })).resolves.toEqual({
+      status: 'mfa_required',
+      factorId: 'factor_1',
+      challengeId: 'challenge_1',
+    })
+    expect(challenge).toHaveBeenCalledWith({ factorId: 'factor_1' })
+  })
+
+  it('verifies MFA codes through Supabase', async () => {
+    const verify = vi.fn().mockResolvedValue({ data: {}, error: null })
+    const client = { auth: { mfa: { verify } } }
+
+    await expect(verifyLoginMfa(client as any, { factorId: 'factor_1', challengeId: 'challenge_1', code: '123456' })).resolves.toEqual({ status: 'ok' })
+    expect(verify).toHaveBeenCalledWith({ factorId: 'factor_1', challengeId: 'challenge_1', code: '123456' })
+  })
+})
+
+describe('login auth bootstrap', () => {
+  it('sets a session from hash tokens and exchanges query codes', async () => {
+    const setSession = vi.fn().mockResolvedValue({ error: null })
+    const exchangeCodeForSession = vi.fn().mockResolvedValue({ error: null })
+    const client = { auth: { setSession, exchangeCodeForSession } }
+
+    await expect(bootstrapAuthSession(client as any, {
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      code: '',
+      error: '',
+      errorDescription: '',
+    })).resolves.toBe(true)
+    expect(setSession).toHaveBeenCalledWith({ access_token: 'access', refresh_token: 'refresh' })
+
+    await expect(bootstrapAuthSession(client as any, {
+      accessToken: '',
+      refreshToken: '',
+      code: 'code-123',
+      error: '',
+      errorDescription: '',
+    })).resolves.toBe(true)
+    expect(exchangeCodeForSession).toHaveBeenCalledWith('code-123')
+  })
+})
+
 describe('forgot password flow', () => {
   it('requests a Supabase password reset with the console step two redirect', async () => {
     const resetPasswordForEmail = vi.fn().mockResolvedValue({ data: {}, error: null })
     const client = { auth: { resetPasswordForEmail } }
 
-    await requestPasswordReset(client as any, ' User@Example.com ', {
-      supabaseUrl: 'https://umpxowxnwroafuzynvwf.supabase.co',
-      supabaseAnonKey: 'publishable',
-      consoleUrl: 'https://console.codepushgo.com/',
-      apiUrl: 'https://api.codepushgo.com',
-      enabled: true,
-    }, 'captcha-token')
+    await requestPasswordReset(client as any, ' User@Example.com ', testConfig, 'captcha-token')
 
     expect(resetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
       redirectTo: 'https://console.codepushgo.com/forgot_password?step=2',
@@ -134,12 +225,14 @@ describe('forgot password flow', () => {
     })
   })
 
-  it('completes hash-token password recovery and signs out other sessions', async () => {
+  it('completes hash-token password recovery, resets MFA when supported, and signs out other sessions', async () => {
     const setSession = vi.fn().mockResolvedValue({ error: null })
     const exchangeCodeForSession = vi.fn().mockResolvedValue({ error: null })
     const updateUser = vi.fn().mockResolvedValue({ error: null })
     const signOut = vi.fn().mockResolvedValue({ error: null })
-    const client = { auth: { setSession, exchangeCodeForSession, updateUser, signOut } }
+    const listFactors = vi.fn().mockResolvedValue({ data: { all: [{ id: 'factor_1' }] }, error: null })
+    const unenroll = vi.fn().mockResolvedValue({ error: null })
+    const client = { auth: { setSession, exchangeCodeForSession, updateUser, signOut, mfa: { listFactors, unenroll } } }
 
     await expect(completePasswordReset(client as any, 'new-password', {
       accessToken: 'access',
@@ -152,6 +245,7 @@ describe('forgot password flow', () => {
     expect(setSession).toHaveBeenCalledWith({ access_token: 'access', refresh_token: 'refresh' })
     expect(exchangeCodeForSession).not.toHaveBeenCalled()
     expect(updateUser).toHaveBeenCalledWith({ password: 'new-password' })
+    expect(unenroll).toHaveBeenCalledWith({ factorId: 'factor_1' })
     expect(signOut).toHaveBeenCalledWith({ scope: 'others' })
   })
 
@@ -178,16 +272,32 @@ describe('forgot password flow', () => {
 })
 
 describe('resend signup email flow', () => {
-  it('uses Supabase signup resend with the normalized email', async () => {
+  it('uses Supabase signup resend with the normalized email and return path', async () => {
     const resend = vi.fn().mockResolvedValue({ data: {}, error: null })
     const client = { auth: { resend } }
 
-    await resendSignupEmail(client as any, ' User@Example.com ')
+    await resendSignupEmail(client as any, ' User@Example.com ', {
+      config: testConfig,
+      captchaToken: 'captcha-token',
+      returnTo: '/settings/account',
+    })
 
     expect(resend).toHaveBeenCalledWith({
       type: 'signup',
       email: 'user@example.com',
+      options: {
+        emailRedirectTo: 'https://console.codepushgo.com/onboarding/verify_email?return_to=%2Fsettings%2Faccount',
+        captchaToken: 'captcha-token',
+      },
     })
+  })
+
+  it('normalizes unsafe return paths and reads captcha tokens from callback params', () => {
+    expect(normalizeRelativeReturnTo('/app/home')).toBe('/app/home')
+    expect(normalizeRelativeReturnTo('https://evil.test')).toBe('/login')
+    expect(normalizeRelativeReturnTo('//evil.test')).toBe('/login')
+    expect(getCaptchaTokenFromParams('?captcha_token=query-token', '')).toBe('query-token')
+    expect(getCaptchaTokenFromParams('', '#turnstile_token=hash-token')).toBe('hash-token')
   })
 })
 

@@ -15,11 +15,21 @@ describe('[Capgo parity] login page surface', () => {
   })
 
   it('keeps the Capgo email-first login flow', () => {
-    expect(source).toContain("statusAuth = ref<'email' | 'credentials'>('email')")
+    expect(source).toContain("statusAuth = ref<'email' | 'credentials' | 'mfa'>('email')")
     expect(source).toContain('data-test="login-email-step"')
     expect(source).toContain('data-test="login-password-step"')
     expect(source).toContain('handleEmailContinue')
     expect(source).toContain('goBackToEmail')
     expect(source).toContain('signInWithSSO')
+  })
+
+  it('adds Capgo-like callback, MFA, and resend surfaces', () => {
+    expect(source).toContain("statusAuth = ref<'email' | 'credentials' | 'mfa'>('email')")
+    expect(source).toContain('bootstrapAuthSession')
+    expect(source).toContain('verifyLoginMfa')
+    expect(source).toContain('data-test="login-mfa-step"')
+    expect(source).toContain('SSO identity linked. Sign in to continue.')
+    expect(source).toContain("reason', 'email_not_verified")
+    expect(source).toContain('/resend_email?')
   })
 })

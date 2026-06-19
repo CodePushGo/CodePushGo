@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-vue-next'
-import { createRegistrationClient, getRegistrationConfig, resendSignupEmail } from '../services/registration'
+import { createRegistrationClient, getCaptchaTokenFromParams, getRegistrationConfig, normalizeRelativeReturnTo, resendSignupEmail } from '../services/registration'
 
 const config = getRegistrationConfig()
 const client = createRegistrationClient(config)
 const params = new URLSearchParams(window.location.search)
+const captchaToken = getCaptchaTokenFromParams()
+const returnTo = normalizeRelativeReturnTo(params.get('return_to'))
 
 const email = ref(params.get('email') || '')
 const pending = ref(false)
 const message = ref('')
 const error = ref('')
+const reason = computed(() => params.get('reason'))
+const description = computed(() => reason.value === 'email_not_verified'
+  ? 'Verify your email before continuing. CodePushGo will send a fresh confirmation link.'
+  : 'Send a fresh Supabase signup confirmation email for your CodePushGo account.')
 
 async function submit() {
   error.value = ''
@@ -26,7 +32,11 @@ async function submit() {
 
   pending.value = true
   try {
-    await resendSignupEmail(client, email.value)
+    await resendSignupEmail(client, email.value, {
+      config,
+      captchaToken,
+      returnTo,
+    })
     message.value = 'Confirmation email sent.'
   }
   catch (submitError) {
@@ -48,7 +58,7 @@ async function submit() {
       <div class="register-copy">
         <p class="eyebrow">Email confirmation</p>
         <h1>Resend email</h1>
-        <p>Send a fresh Supabase signup confirmation email for your CodePushGo account.</p>
+        <p>{{ description }}</p>
       </div>
     </section>
 
@@ -80,9 +90,9 @@ async function submit() {
         </button>
       </form>
 
-      <a class="support-link" href="/login">
+      <a class="support-link" :href="returnTo === '/login' ? '/login' : returnTo">
         <ArrowLeft :size="16" />
-        Back to login page
+        Back
       </a>
     </section>
   </main>

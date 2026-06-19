@@ -1,4 +1,4 @@
-export type ConsoleSection = 'home' | 'overview' | 'releases' | 'channels' | 'devices' | 'stats' | 'compatibility' | 'info' | 'access' | 'api-keys' | 'settings'
+export type ConsoleSection = 'dashboard' | 'home' | 'overview' | 'builds' | 'releases' | 'channels' | 'devices' | 'stats' | 'compatibility' | 'info' | 'access' | 'api-keys' | 'settings'
 
 export function pathSection(pathname = window.location.pathname): ConsoleSection {
   if (pathname.includes('/apikey') || pathname.includes('/api-key'))
@@ -15,11 +15,15 @@ export function pathSection(pathname = window.location.pathname): ConsoleSection
     return 'devices'
   if (pathname.includes('/compatibility'))
     return 'compatibility'
-  if (pathname.includes('/stat') || pathname.includes('/analytic'))
+  if (pathname.includes('/build'))
+    return 'builds'
+  if (pathname.includes('/stat') || pathname.includes('/analytic') || pathname.includes('/logs'))
     return 'stats'
   if (pathname.includes('/bundle') || pathname.includes('/release'))
     return 'releases'
-  if (pathname === '/' || pathname.includes('/app/home') || pathname === '/app/new' || pathname === '/dashboard' || pathname === '/apps')
+  if (pathname === '/' || pathname === '/dashboard')
+    return 'dashboard'
+  if (pathname.includes('/app/home') || pathname === '/app/new' || pathname === '/apps')
     return 'home'
   return 'overview'
 }
@@ -47,7 +51,9 @@ export function appHref(appId: string, target: ConsoleSection = 'overview') {
   if (target === 'compatibility')
     return `/app/${encoded}/compatibility`
   if (target === 'stats')
-    return `/app/${encoded}/stats`
+    return `/app/${encoded}/logs`
+  if (target === 'builds')
+    return `/app/${encoded}/builds`
   if (target === 'info')
     return `/app/${encoded}/info`
   if (target === 'access')
@@ -60,13 +66,15 @@ export function consoleSectionTitle(section: ConsoleSection, onboarding = false)
     return 'Onboarding'
 
   const titles: Record<ConsoleSection, string> = {
-    home: 'Dashboard',
+    dashboard: 'Dashboard',
+    home: 'Apps',
     overview: 'Overview',
+    builds: 'Builds',
     releases: 'Bundles',
     compatibility: 'Compatibility',
     channels: 'Channels',
     devices: 'Devices',
-    stats: 'Stats',
+    stats: 'Logs',
     info: 'Info',
     access: 'Access',
     'api-keys': 'API keys',

@@ -566,7 +566,7 @@ td {
 th {
   color: #4c5a64;
   font-size: 12px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .empty {
@@ -592,6 +592,175 @@ th {
   to {
     transform: rotate(360deg);
   }
+}
+
+.button,
+.row-actions a {
+  min-height: 38px;
+  border: 1px solid #c9d2d9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172026;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.button.primary {
+  background: #116149;
+  border-color: #116149;
+  color: #ffffff;
+}
+
+.console-table-surface {
+  display: grid;
+  gap: 14px;
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.table-toolbar h2 {
+  font-size: 20px;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.table-actions select {
+  width: auto;
+  min-width: 150px;
+}
+
+.search-field {
+  min-width: 260px;
+  height: 38px;
+  border: 1px solid #c9d2d9;
+  border-radius: 8px;
+  background: #ffffff;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: #667681;
+}
+
+.search-field input {
+  min-height: 0;
+  border: 0;
+  padding: 0;
+}
+
+.search-field input:focus {
+  outline: 0;
+}
+
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-actions button,
+.row-actions a {
+  position: relative;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: #eef2f4;
+  color: #4c5a64;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-pill.success {
+  background: #edf8f3;
+  color: #116149;
+}
+
+.status-pill.warning {
+  background: #fff8e6;
+  color: #8a5a00;
+}
+
+.status-pill.muted {
+  background: #eef2f4;
+  color: #667681;
+}
+
+.removed-feature-note {
+  border: 1px solid #dce3e8;
+  border-radius: 8px;
+  background: #ffffff;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 14px;
+}
+
+.removed-feature-note strong,
+.removed-feature-note span {
+  min-width: 0;
+}
+
+.removed-feature-note span {
+  grid-column: 1;
+  color: #667681;
+  font-size: 13px;
+}
+
+.removed-feature-note button {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+.overview-hero-grid,
+.command-list {
+  display: grid;
+  gap: 12px;
+}
+
+.overview-hero-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+}
+
+.disabled-row {
+  color: #667681;
+}
+
+tr.active td,
+tr.active th {
+  background: #edf8f3;
+}
+
+.app-name-cell small {
+  display: block;
+  color: #667681;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 @media (max-width: 980px) {
@@ -2028,5 +2197,87 @@ th {
     flex-direction: row;
     align-items: flex-start;
     justify-content: space-between;
+  }
+}
+.organization-switcher {
+  padding: 0 0 2px;
+}
+
+.organization-switcher > button {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  justify-content: start;
+  text-align: left;
+  border-color: rgba(148, 163, 184, .28);
+  background: rgba(15, 23, 42, .28);
+  color: #f8fafc;
+}
+
+.organization-switcher .mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #116149;
+}
+
+.organization-switcher span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.organization-switcher strong,
+.organization-switcher small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.organization-switcher small {
+  color: #94a3b8;
+  font-size: 12px;
+}
+.auth-logo-image,
+.auth-mobile-logo {
+  display: block;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.sidebar-logo img {
+  object-fit: cover;
+}
+
+@media (max-width: 720px) {
+  .table-toolbar,
+  .table-actions,
+  .removed-feature-note,
+  .overview-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-toolbar,
+  .table-actions {
+    align-items: stretch;
+  }
+
+  .table-toolbar {
+    display: grid;
+  }
+
+  .table-actions select,
+  .search-field {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .removed-feature-note button {
+    grid-row: auto;
+    grid-column: 1;
   }
 }

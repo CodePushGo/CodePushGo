@@ -20,7 +20,8 @@ export const guestPath = [
 
 export const canonicalRedirects = [
   { path: '/', redirect: '/login' },
-  { path: '/dashboard', redirect: '/app/home' },
+  { path: '/app/home', redirect: '/dashboard' },
+  { path: '/apikeys', redirect: '/dashboard/apikeys' },
   { path: '/app', redirect: '/apps' },
   { path: '/p/:package', redirect: legacyAppRedirect },
   { path: '/app/p/:package', redirect: legacyAppRedirect },

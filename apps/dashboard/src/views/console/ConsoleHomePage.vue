@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Copy, Plus } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
+import AppTable from '../../components/tables/AppTable.vue'
 import TopApps from '../../components/dashboard/TopApps.vue'
 import WelcomeBanner from '../../components/dashboard/WelcomeBanner.vue'
 import { useConsoleStore } from '../../stores/console'
@@ -32,5 +33,6 @@ const {
         <p>Do not create a separate CodePushGo identifier. The app id is the React Native native bundle ID.</p>
       </article>
     </div>
+    <AppTable :apps="apps" :selected-app-id="selectedAppId" />
   </section>
 </template>

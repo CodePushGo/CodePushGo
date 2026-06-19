@@ -9,11 +9,8 @@ defineProps<{
   currentSection: ConsoleSection
   selectedAppId: string
   sidebarOpen: boolean
-  appMenuOpen: boolean
   displayName: string
   email?: string
-  pending: boolean
-  loading: boolean
   title: string
   eyebrow: string
 }>()
@@ -21,11 +18,8 @@ defineProps<{
 const emit = defineEmits<{
   closeSidebar: []
   toggleSidebar: []
-  toggleAppMenu: []
   navigate: [section: ConsoleSection, appId?: string]
   signOut: []
-  refresh: []
-  upload: []
 }>()
 </script>
 
@@ -36,11 +30,9 @@ const emit = defineEmits<{
       :current-section="currentSection"
       :selected-app-id="selectedAppId"
       :sidebar-open="sidebarOpen"
-      :app-menu-open="appMenuOpen"
       :display-name="displayName"
       :email="email"
       @close-sidebar="emit('closeSidebar')"
-      @toggle-app-menu="emit('toggleAppMenu')"
       @navigate="(section, appId) => emit('navigate', section, appId)"
       @sign-out="emit('signOut')"
     />
@@ -48,13 +40,9 @@ const emit = defineEmits<{
     <section class="capgo-console-content">
       <Navbar
         :sidebar-open="sidebarOpen"
-        :pending="pending"
-        :loading="loading"
         :title="title"
         :eyebrow="eyebrow"
         @toggle-sidebar="emit('toggleSidebar')"
-        @refresh="emit('refresh')"
-        @upload="emit('upload')"
       />
 
       <slot />

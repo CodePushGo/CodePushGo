@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { Menu, RefreshCw, UploadCloud } from 'lucide-vue-next'
+import { Menu } from 'lucide-vue-next'
 
 defineProps<{
   sidebarOpen: boolean
-  pending: boolean
-  loading: boolean
   title: string
   eyebrow: string
 }>()
 
 const emit = defineEmits<{
   toggleSidebar: []
-  refresh: []
-  upload: []
 }>()
 </script>
 
@@ -29,14 +25,5 @@ const emit = defineEmits<{
     </div>
 
     <div class="navbar-spacer" />
-
-    <button type="button" :disabled="pending || loading" @click="emit('refresh')">
-      <RefreshCw :size="16" />
-      Refresh
-    </button>
-    <button class="primary" type="button" @click="emit('upload')">
-      <UploadCloud :size="16" />
-      Upload
-    </button>
   </header>
 </template>

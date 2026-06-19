@@ -1,22 +1,21 @@
 <script setup lang="ts">
-import { UploadCloud } from 'lucide-vue-next'
 import BundleTable from '../../components/tables/BundleTable.vue'
+import type { ConsoleReleaseRecord } from '../../services/registration'
 import { useConsoleStore } from '../../stores/console'
 
 const {
   copyCommand,
   releases,
   selectedAppId,
-  uploadCommand,
 } = useConsoleStore()
+
+function copyBundle(release: ConsoleReleaseRecord) {
+  void copyCommand(`${release.platform}:${release.channel}:${release.version}`)
+}
 </script>
 
 <template>
-  <section class="dashboard-content console-table-card">
-    <header>
-      <h2>Bundles</h2>
-      <button type="button" @click="copyCommand(uploadCommand)"><UploadCloud :size="16" /> Upload command</button>
-    </header>
-    <BundleTable :app-id="selectedAppId" :releases="releases" />
+  <section class="dashboard-content">
+    <BundleTable :app-id="selectedAppId" :releases="releases" @copy-bundle="copyBundle" />
   </section>
 </template>

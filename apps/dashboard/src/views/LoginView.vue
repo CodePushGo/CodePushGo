@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ArrowLeft, ArrowRight, Loader2, ShieldCheck } from 'lucide-vue-next'
 import AuthPageShell from '../components/auth/AuthPageShell.vue'
 import { authInlineLinkClass, authPanelClass, authPrimaryButtonClass, authSecondaryButtonClass } from '../components/auth/pageStyles'
-import { createRegistrationClient, getRegistrationConfig, loginAccount } from '../services/registration'
+import { bootstrapAuthSession, createRegistrationClient, getRegistrationConfig, loginAccount, parseRecoveryParams, verifyLoginMfa } from '../services/registration'
 
 const config = getRegistrationConfig()
 const client = createRegistrationClient(config)
@@ -13,14 +13,28 @@ const route = useRoute()
 const isLoading = ref(false)
 const isDomainChecking = ref(false)
 const isCheckingSavedSession = ref(false)
-const statusAuth = ref<'email' | 'credentials'>('email')
-const emailForLogin = ref('')
+const statusAuth = ref<'email' | 'credentials' | 'mfa'>('email')
+const emailForLogin = ref(typeof route.query.email === 'string' ? route.query.email : '')
 const password = ref('')
+const mfaCode = ref('')
+const mfaFactorId = ref('')
+const mfaChallengeId = ref('')
 const error = ref('')
+const message = ref('')
 const hasSso = ref(false)
 const enforceSso = ref(false)
 
 const isEmailStepBusy = computed(() => isDomainChecking.value || isCheckingSavedSession.value)
+const isEmailNotVerified = computed(() => route.query.reason === 'email_not_verified' || route.query.error === 'email_not_verified' || route.query.error_code === 'email_not_verified')
+const resendEmailUrl = computed(() => {
+  const params = new URLSearchParams()
+  const email = emailForLogin.value.trim().toLowerCase()
+  if (email)
+    params.set('email', email)
+  params.set('reason', 'email_not_verified')
+  params.set('return_to', safeRedirectPath())
+  return `/resend_email?${params}`
+})
 const heroChips = ['Live updates', 'Release analytics', 'Channel control']
 const heroHighlights = [
   {
@@ -43,6 +57,18 @@ function safeRedirectPath() {
   if (typeof target === 'string' && target.startsWith('/') && !target.startsWith('//'))
     return target
   return '/app/home'
+}
+
+function clearLoginAuthParamsFromUrl(href: string) {
+  const url = new URL(href)
+  const hashParams = new URLSearchParams(url.hash.replace('#', ''))
+  for (const key of ['access_token', 'refresh_token', 'code', 'error', 'error_description']) {
+    url.searchParams.delete(key)
+    hashParams.delete(key)
+  }
+  const nextHash = hashParams.toString()
+  url.hash = nextHash ? `#${nextHash}` : ''
+  return url.toString()
 }
 
 function focusLoginEmailInput(attempt = 0) {
@@ -80,6 +106,7 @@ async function checkDomain(email: string): Promise<{ has_sso: boolean, enforce_s
 
 async function handleEmailContinue() {
   error.value = ''
+  message.value = ''
   const email = emailForLogin.value.trim().toLowerCase()
   if (!email.includes('@')) {
     error.value = 'Enter a valid email address.'
@@ -97,6 +124,7 @@ async function handleEmailContinue() {
 
 async function handlePasswordSubmit() {
   error.value = ''
+  message.value = ''
   if (!client) {
     error.value = 'Supabase public config is missing.'
     return
@@ -108,7 +136,45 @@ async function handlePasswordSubmit() {
 
   isLoading.value = true
   try {
-    await loginAccount(client, { email: emailForLogin.value, password: password.value })
+    const result = await loginAccount(client, { email: emailForLogin.value, password: password.value })
+    if (result.status === 'mfa_required') {
+      mfaFactorId.value = result.factorId || ''
+      mfaChallengeId.value = result.challengeId || ''
+      mfaCode.value = ''
+      statusAuth.value = 'mfa'
+      message.value = 'Enter your two-factor authentication code to continue.'
+      return
+    }
+    window.location.assign(safeRedirectPath())
+  }
+  catch (submitError) {
+    error.value = submitError instanceof Error ? submitError.message : String(submitError)
+  }
+  finally {
+    isLoading.value = false
+  }
+}
+
+async function handleMfaSubmit() {
+  error.value = ''
+  message.value = ''
+  if (!client) {
+    error.value = 'Supabase public config is missing.'
+    return
+  }
+  const code = mfaCode.value.replaceAll(' ', '').trim()
+  if (!code) {
+    error.value = 'Enter your two-factor authentication code.'
+    return
+  }
+
+  isLoading.value = true
+  try {
+    await verifyLoginMfa(client, {
+      factorId: mfaFactorId.value,
+      challengeId: mfaChallengeId.value,
+      code,
+    })
     window.location.assign(safeRedirectPath())
   }
   catch (submitError) {
@@ -121,6 +187,7 @@ async function handlePasswordSubmit() {
 
 async function handleSsoLogin() {
   error.value = ''
+  message.value = ''
   if (!client) {
     error.value = 'Supabase public config is missing.'
     return
@@ -162,10 +229,44 @@ async function goBackToEmail() {
   hasSso.value = false
   enforceSso.value = false
   password.value = ''
+  mfaCode.value = ''
+  mfaFactorId.value = ''
+  mfaChallengeId.value = ''
   error.value = ''
+  message.value = ''
   await nextTick()
   focusLoginEmailInput()
 }
+
+onMounted(async () => {
+  if (route.query.sso_linked === 'true')
+    message.value = 'SSO identity linked. Sign in to continue.'
+  else if (isEmailNotVerified.value)
+    error.value = 'Please verify your email before continuing.'
+
+  const authParams = parseRecoveryParams(window.location.search, window.location.hash)
+  if (!authParams.accessToken && !authParams.refreshToken && !authParams.code && !authParams.error)
+    return
+
+  if (!client) {
+    error.value = 'Supabase public config is missing.'
+    return
+  }
+
+  isCheckingSavedSession.value = true
+  try {
+    const didBootstrap = await bootstrapAuthSession(client, authParams)
+    window.history.replaceState({}, '', clearLoginAuthParamsFromUrl(window.location.href))
+    if (didBootstrap)
+      window.location.assign(safeRedirectPath())
+  }
+  catch (bootstrapError) {
+    error.value = bootstrapError instanceof Error ? bootstrapError.message : String(bootstrapError)
+  }
+  finally {
+    isCheckingSavedSession.value = false
+  }
+})
 </script>
 
 <template>
@@ -197,7 +298,11 @@ async function goBackToEmail() {
           data-test="email"
         >
 
-        <p v-if="error" class="form-alert error" data-test="form-error">{{ error }}</p>
+        <p v-if="message" class="form-alert success" data-test="form-message">{{ message }}</p>
+        <p v-if="error" class="form-alert error" data-test="form-error">
+          {{ error }}
+          <a v-if="isEmailNotVerified" :href="resendEmailUrl" :class="authInlineLinkClass">Resend confirmation email</a>
+        </p>
 
         <button :class="authPrimaryButtonClass" type="submit" :disabled="isEmailStepBusy">
           <Loader2 v-if="isEmailStepBusy" :size="18" class="spin" />
@@ -206,7 +311,7 @@ async function goBackToEmail() {
         </button>
       </form>
 
-      <form v-else class="capgo-auth-form" data-test="login-password-step" @submit.prevent="handlePasswordSubmit">
+      <form v-else-if="statusAuth === 'credentials'" class="capgo-auth-form" data-test="login-password-step" @submit.prevent="handlePasswordSubmit">
         <div class="auth-account-context">
           <span class="auth-selected-email">{{ emailForLogin }}</span>
           <button class="auth-back-email-button" type="button" :disabled="isLoading" @click="goBackToEmail">
@@ -254,6 +359,38 @@ async function goBackToEmail() {
         </template>
 
         <p v-if="error && enforceSso" class="form-alert error" data-test="form-error">{{ error }}</p>
+      </form>
+
+      <form v-else class="capgo-auth-form" data-test="login-mfa-step" @submit.prevent="handleMfaSubmit">
+        <div class="auth-account-context">
+          <span class="auth-selected-email">{{ emailForLogin }}</span>
+          <button class="auth-back-email-button" type="button" :disabled="isLoading" @click="goBackToEmail">
+            <ArrowLeft :size="15" />
+            Change
+          </button>
+        </div>
+
+        <label class="capgo-auth-label" for="login-mfa-code">
+          Two-factor code
+        </label>
+        <input
+          id="login-mfa-code"
+          v-model="mfaCode"
+          class="capgo-auth-input"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          required
+          data-test="mfa-code"
+        >
+
+        <p v-if="message" class="form-alert success" data-test="form-message">{{ message }}</p>
+        <p v-if="error" class="form-alert error" data-test="form-error">{{ error }}</p>
+
+        <button :class="authPrimaryButtonClass" type="submit" :disabled="isLoading">
+          <Loader2 v-if="isLoading" :size="18" class="spin" />
+          <ArrowRight v-else :size="18" />
+          Verify code
+        </button>
       </form>
 
       <div :class="authPanelClass">

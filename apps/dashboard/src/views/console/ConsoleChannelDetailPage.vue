@@ -18,7 +18,7 @@ const {
 
 const channelName = computed(() => String(route.params.channel || ''))
 const decodedChannelName = computed(() => decodeURIComponent(channelName.value))
-const channel = computed(() => channels.value.find(row => row.name === decodedChannelName.value))
+const channel = computed(() => channels.value.find(row => String((row as typeof row & { id?: number | string }).id || '') === decodedChannelName.value) || channels.value.find(row => row.name === decodedChannelName.value))
 const channelReleases = computed(() => releases.value.filter(release => release.channel === decodedChannelName.value))
 const overrideDeviceIds = computed(() => new Set(deviceChannels.value.filter(row => row.channel === decodedChannelName.value).map(row => row.device_id)))
 const overriddenDeviceIds = computed(() => new Set(deviceChannels.value.map(row => row.device_id)))
