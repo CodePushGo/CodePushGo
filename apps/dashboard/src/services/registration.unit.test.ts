@@ -3,6 +3,7 @@ import {
   completePasswordReset,
   createAppOnboarding,
   createOrganizationOnboarding,
+  createRegistrationClient,
   getRegistrationConfig,
   normalizeBillingPeriod,
   normalizePlan,
@@ -24,6 +25,14 @@ describe('registration config', () => {
 
   it('uses the CodePushGo publishable key by default', () => {
     expect(getRegistrationConfig({ VITE_SUPABASE_PROJECT_REF: 'abc' }).enabled).toBe(true)
+  })
+})
+
+describe('registration Supabase client', () => {
+  it('reuses the same Supabase client for the same public config', () => {
+    const config = getRegistrationConfig({ VITE_SUPABASE_PROJECT_REF: 'umpxowxnwroafuzynvwf' })
+
+    expect(createRegistrationClient(config)).toBe(createRegistrationClient(config))
   })
 })
 

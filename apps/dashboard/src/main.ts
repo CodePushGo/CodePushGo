@@ -10,7 +10,7 @@ export type UserModule = (ctx: { app: VueApp, router: Router }) => void
 const app = createApp(App)
 const router = createDashboardRouter()
 
-Object.values(import.meta.glob<{ install: UserModule }>('./modules/*.ts', { eager: true }))
+Object.values(import.meta.glob<{ install: UserModule }>(['./modules/*.ts', '!./modules/*.test.ts', '!./modules/*.unit.test.ts'], { eager: true }))
   .forEach(module => module.install?.({ app, router }))
 
 app.use(router)

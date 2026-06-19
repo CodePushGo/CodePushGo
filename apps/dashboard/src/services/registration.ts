@@ -100,16 +100,25 @@ export function getRegistrationConfig(env: Partial<SupabaseEnv> = import.meta.en
   }
 }
 
+let registrationClientCache: { key: string, client: SupabaseClient } | null = null
+
 export function createRegistrationClient(config = getRegistrationConfig()) {
   if (!config.enabled)
     return null
-  return createClient(config.supabaseUrl, config.supabaseAnonKey, {
+
+  const cacheKey = `${config.supabaseUrl}::${config.supabaseAnonKey}`
+  if (registrationClientCache?.key === cacheKey)
+    return registrationClientCache.client
+
+  const client = createClient(config.supabaseUrl, config.supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
     },
   })
+  registrationClientCache = { key: cacheKey, client }
+  return client
 }
 export async function createConfirmedAccount(input: SignupInput, config = getRegistrationConfig()) {
   const response = await fetch(`${config.apiUrl.replace(/\/+$/, '')}/auth/signup`, {
