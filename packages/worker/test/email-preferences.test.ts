@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { defaultEmailPreferences, emailPreferenceKeyForType, isEmailTypeEnabled, normalizeEmailPreferences, updateEmailPreferences } from '../src/email-preferences'
 
-const migrationSql = readFileSync(join(process.cwd(), 'supabase/migrations/20260611111318_codepushgo_init.sql'), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 describe('[Capgo parity] email preferences', () => {
   it.concurrent('has email_preferences column with default values', () => {

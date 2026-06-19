@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { authHeaders, testApp } from './helpers'
 
-const migrationSql = readFileSync(resolve(__dirname, '../../../supabase/migrations/20260611111318_codepushgo_init.sql'), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 const manifest = [{ file_name: 'entry.js', s3_path: 'assets/entry.js', file_hash: 'hash-entry' }]
 
 async function seedManifestRelease() {
@@ -32,9 +32,9 @@ async function seedManifestRelease() {
 }
 
 describe('[Capgo parity] manifest access guards', () => {
-  it('does not expose a direct Supabase manifest table in the consolidated Worker schema', () => {
-    expect(migrationSql).not.toContain('CREATE TABLE IF NOT EXISTS public.manifest')
-    expect(migrationSql).toContain('manifest JSONB')
+  it('keeps the real Capgo manifest table and bundle count schema', () => {
+    expect(migrationSql).toContain('CREATE TABLE IF NOT EXISTS public.manifest')
+    expect(migrationSql).toContain('manifest_entry')
     expect(migrationSql).toContain('manifest_count INTEGER NOT NULL DEFAULT 0')
   })
 

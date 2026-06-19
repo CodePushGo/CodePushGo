@@ -48,7 +48,7 @@ describe('[Capgo parity] deploy scope matching', () => {
   })
 
   it.concurrent('deploys Worker and migrations for consolidated schema changes', () => {
-    expect(resolveDeployScopeFromFiles(['supabase/migrations/20260611111318_codepushgo_init.sql'])).toEqual({
+    expect(resolveDeployScopeFromFiles(['supabase/migrations/20250530233128_base.sql'])).toEqual({
       ...noDeploys,
       migrations: true,
       worker: true,

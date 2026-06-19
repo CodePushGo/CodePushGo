@@ -10,8 +10,8 @@ This audit tracks the copied Capgo console/backend structure adapted for CodePus
 | CodePushGo Supabase public config present | pass | dashboard public config points at the CodePushGo Supabase project |
 | console custom domain deploy configured | pass | console Worker assets deploy to the CodePushGo console domain |
 | Cloudflare Worker backend is configured | pass | wrangler.toml and worker scripts are present |
-| no Supabase Edge Functions | pass | repo uses the consolidated migration and Cloudflare Worker runtime instead of Supabase Edge Functions |
-| consolidated migration contains onboarding and plan intent | pass | Supabase schema has onboarding RPCs and plan intent table |
+| no Supabase Edge Functions | pass | repo uses Cloudflare Worker runtime instead of Supabase Edge Functions |
+| root Supabase migrations are real Capgo stack | pass | root migrations use Capgo app_versions table, not a compatibility view |
 | React Native updater resolves bundle id automatically | pass | updater resolves RN bundle id and sends app_id/bundle_id |
 | AGENTS norms present | pass | root AGENTS.md captures repo norms |
 | GitHub Actions run full local gate | pass | CI test workflow mirrors local verification gate |

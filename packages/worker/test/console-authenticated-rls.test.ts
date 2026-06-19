@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-const migrationSql = readFileSync(new URL('../../../supabase/migrations/20260611111318_codepushgo_init.sql', import.meta.url), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 describe('console authenticated RLS migration', () => {
   it('allows authenticated users to read org-scoped console data', () => {

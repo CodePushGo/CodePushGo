@@ -28,7 +28,8 @@ const dashboardWrangler = readWorkspaceFile('apps/dashboard/wrangler.toml')
 const deployWorkflow = readWorkspaceFile('.github/workflows/deploy_worker.yml')
 const testsWorkflow = readWorkspaceFile('.github/workflows/tests.yml')
 const agents = readWorkspaceFile('AGENTS.md')
-const migration = readWorkspaceFile('supabase/migrations/20260611111318_codepushgo_init.sql')
+const migrationFiles = readdirSync(join(workspace, 'supabase/migrations')).filter(file => file.endsWith('.sql')).sort()
+const migrations = migrationFiles.map(file => readWorkspaceFile(`supabase/migrations/${file}`)).join('\n')
 const workerIndex = readWorkspaceFile('packages/worker/src/index.ts')
 const updaterIndex = readWorkspaceFile('packages/react-native-updater/src/index.ts')
 const appPages = readdirSync(join(workspace, 'apps/dashboard/src/pages'))
@@ -40,8 +41,8 @@ const semanticChecks: SemanticCheck[] = [
   semanticCheck('CodePushGo Supabase public config present', dashboardConfig.includes('https://umpxowxnwroafuzynvwf.supabase.co') && dashboardConfig.includes('sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO'), 'dashboard public config points at the CodePushGo Supabase project'),
   semanticCheck('console custom domain deploy configured', dashboardWrangler.includes('console.codepushgo.com') && deployWorkflow.includes('wrangler deploy --config apps/dashboard/wrangler.toml'), 'console Worker assets deploy to the CodePushGo console domain'),
   semanticCheck('Cloudflare Worker backend is configured', hasFile('packages/worker/wrangler.toml') && packageJson.scripts?.['worker:dev']?.includes('wrangler dev') && packageJson.scripts?.['worker:deploy']?.includes('wrangler deploy'), 'wrangler.toml and worker scripts are present'),
-  semanticCheck('no Supabase Edge Functions', !existsSync(join(workspace, 'supabase/functions')) && !deployWorkflow.includes('supabase functions deploy') && !/functions\/v1|supabase\/functions/.test(workerIndex), 'repo uses the consolidated migration and Cloudflare Worker runtime instead of Supabase Edge Functions'),
-  semanticCheck('consolidated migration contains onboarding and plan intent', migration.includes('CREATE TABLE IF NOT EXISTS public.plan_intents') && migration.includes('CREATE OR REPLACE FUNCTION public.create_organization_onboarding') && migration.includes('CREATE OR REPLACE FUNCTION public.create_app_onboarding'), 'Supabase schema has onboarding RPCs and plan intent table'),
+  semanticCheck('no Supabase Edge Functions', !existsSync(join(workspace, 'supabase/functions')) && !deployWorkflow.includes('supabase functions deploy') && !/functions\/v1|supabase\/functions/.test(workerIndex), 'repo uses Cloudflare Worker runtime instead of Supabase Edge Functions'),
+  semanticCheck('root Supabase migrations are real Capgo stack', migrationFiles.includes('20250530233128_base.sql') && migrations.includes('CREATE TABLE IF NOT EXISTS "public"."app_versions"') && !migrations.includes('CREATE OR REPLACE VIEW public.app_versions'), 'root migrations use Capgo app_versions table, not a compatibility view'),
   semanticCheck('React Native updater resolves bundle id automatically', updaterIndex.includes('getCodePushGoBundleId') && updaterIndex.includes('bundle_id: this.appId') && updaterIndex.includes('startCodePushGo'), 'updater resolves RN bundle id and sends app_id/bundle_id'),
   semanticCheck('AGENTS norms present', agents.includes('Use `bun` and `bunx`') && agents.includes('Do not add Supabase Edge Functions'), 'root AGENTS.md captures repo norms'),
   semanticCheck('GitHub Actions run full local gate', ['bun run lint', 'bun run typecheck', 'bun run build', 'bun run test', 'bun run native:contract', 'bun run parity:audit'].every(command => testsWorkflow.includes(command)), 'CI test workflow mirrors local verification gate'),

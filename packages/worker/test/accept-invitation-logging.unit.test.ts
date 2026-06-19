@@ -1,9 +1,10 @@
-import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { testApp } from './helpers'
 
-const migrationSql = readFileSync(new URL('../../../supabase/migrations/20260611111318_codepushgo_init.sql', import.meta.url), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 const inviteToken = 'secret-invite-token'
 const password = 'Password1!'

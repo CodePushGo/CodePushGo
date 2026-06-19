@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { testApp } from './helpers'
 
-const migrationSql = readFileSync(new URL('../../../supabase/migrations/20260611111318_codepushgo_init.sql', import.meta.url), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 const ssoHeaders = {
   authorization: 'Bearer supabase-session-token',

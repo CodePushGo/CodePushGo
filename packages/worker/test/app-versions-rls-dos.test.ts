@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { authHeaders, testApp } from './helpers'
 
-const migrationSql = readFileSync(new URL('../../../supabase/migrations/20260611111318_codepushgo_init.sql', import.meta.url), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 function keyHeaders(key: string) {
   return { capgkey: key, 'content-type': 'application/json' }
@@ -44,12 +45,12 @@ async function seedAppVersion() {
 }
 
 describe('[Capgo parity] app_versions RLS DoS regression', () => {
-  it('defines an app_versions compatibility view that returns no anonymous rows', () => {
-    expect(migrationSql).toContain('CREATE OR REPLACE VIEW public.app_versions')
-    expect(migrationSql).toContain('WITH (security_barrier = true)')
-    expect(migrationSql).toContain("public.request_header('capgkey')")
-    expect(migrationSql).toContain('JOIN public.apikey_bindings')
-    expect(migrationSql).toContain('GRANT SELECT ON public.app_versions TO anon, authenticated, service_role')
+  it('defines app_versions as the real Capgo table with upload/read policies', () => {
+    expect(migrationSql).toContain('CREATE TABLE IF NOT EXISTS "public"."app_versions"')
+    expect(migrationSql).toContain('CREATE TABLE IF NOT EXISTS "public"."app_versions_meta"')
+    expect(migrationSql).toContain('ALTER TABLE "public"."app_versions" ENABLE ROW LEVEL SECURITY')
+    expect(migrationSql).toContain('CREATE INDEX "idx_app_versions_retention_cleanup"')
+    expect(migrationSql).not.toContain('CREATE OR REPLACE VIEW public.app_versions')
   })
 
   it('keeps unauthenticated parallel version probes empty and bounded', async () => {

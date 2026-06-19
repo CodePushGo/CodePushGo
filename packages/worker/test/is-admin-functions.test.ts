@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { isPlatformAdminSecretValue } from '../src/platform-admin'
 
-const migrationSql = readFileSync(resolve(__dirname, '../../../supabase/migrations/20260611111318_codepushgo_init.sql'), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 describe('[Capgo parity] is_platform_admin function', () => {
   it('matches Capgo admin_users array and object semantics', () => {

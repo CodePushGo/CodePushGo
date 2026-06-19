@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { selectOldDeletedVersionsForPermanentDeletion } from '../src/deleted-versions-cleanup'
 
-const migrationSql = readFileSync(join(process.cwd(), 'supabase/migrations/20260611111318_codepushgo_init.sql'), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 describe('[Capgo parity] delete_old_deleted_versions', () => {
   it.concurrent('permanently deletes only versions soft-deleted for at least 90 days', () => {

@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const migrationSql = readFileSync(resolve(__dirname, '../../../supabase/migrations/20260611111318_codepushgo_init.sql'), 'utf8')
+import { readRootMigrations } from './helpers/migration-sql'
+
+const migrationSql = readRootMigrations()
 
 function functionSql(name: string) {
   const start = migrationSql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}`)
@@ -13,10 +13,11 @@ function functionSql(name: string) {
 }
 
 describe('[Capgo parity] plan validation SQL', () => {
-  it('keeps current plan checks limited to succeeded subscriptions', () => {
+  it('keeps current plan lookup on Capgo org stripe info without past_due special casing', () => {
     const sql = functionSql('get_current_plan_name_org')
 
-    expect(sql).toContain("stripe_info.status = 'succeeded'")
+    expect(sql).toContain('JOIN public.stripe_info si ON o.customer_id = si.customer_id')
+    expect(sql).toContain('JOIN public.plans p ON si.product_id = p.stripe_id')
     expect(sql).not.toContain('past_due')
   })
 })
