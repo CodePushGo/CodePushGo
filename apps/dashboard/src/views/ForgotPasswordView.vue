@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from 'lucide-vue-next'
+import AuthPageShell from '../components/auth/AuthPageShell.vue'
 import { completePasswordReset, createRegistrationClient, getCaptchaTokenFromParams, getRegistrationConfig, parseRecoveryParams, requestPasswordReset } from '../services/registration'
 
 const config = getRegistrationConfig()
@@ -65,65 +66,56 @@ async function submit() {
   }
 }
 </script>
-
 <template>
-  <main class="auth-shell compact-auth">
-    <section class="auth-brand compact-brand">
-      <a class="register-logo" href="/" aria-label="CodePushGo console">
-        <span class="mark">CG</span>
-        <span>CodePushGo</span>
-      </a>
-      <div class="register-copy">
-        <p class="eyebrow">Console access</p>
-        <h1>Password recovery</h1>
-        <p>Recover access to your React Native OTA update console with Supabase Auth.</p>
-      </div>
-    </section>
+  <AuthPageShell
+    card-kicker="Forgot password"
+    :card-title="title"
+    :card-description="description"
+    hero-kicker="Console access"
+    hero-title="Password recovery"
+    hero-description="Recover access to your React Native OTA update console with the same auth flow as the console."
+    :chips="['Console', 'Recovery']"
+    :hero-highlights="[
+      { title: 'Secure reset', description: 'Use the recovery link from your inbox to finish the password change.' },
+      { title: 'Same console session', description: 'Return directly to the console after the password is updated.' },
+      { title: 'React Native OTA', description: 'Keep access to apps, channels, bundles, and logs.' },
+    ]"
+  >
+    <form class="capgo-auth-form" @submit.prevent="submit">
+      <label v-if="step === 1" class="capgo-auth-stack">
+        <span class="capgo-auth-label">Email</span>
+        <input v-model="email" class="capgo-auth-input" type="email" autocomplete="email" placeholder="you@company.com" required>
+      </label>
 
-    <section class="auth-panel" aria-labelledby="forgot-title">
-      <div class="register-head">
-        <div>
-          <p class="eyebrow">Forgot password</p>
-          <h2 id="forgot-title">{{ title }}</h2>
-        </div>
-        <a href="/login">Sign in</a>
-      </div>
-      <p class="auth-note">{{ description }}</p>
-
-      <form class="register-form" @submit.prevent="submit">
-        <label v-if="step === 1">
-          Email
-          <input v-model="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+      <template v-else>
+        <label class="capgo-auth-stack">
+          <span class="capgo-auth-label">New password</span>
+          <input v-model="password" class="capgo-auth-input" type="password" autocomplete="new-password" minlength="8" required>
         </label>
+        <label class="capgo-auth-stack">
+          <span class="capgo-auth-label">Confirm password</span>
+          <input v-model="confirmPassword" class="capgo-auth-input" type="password" autocomplete="new-password" minlength="8" required>
+        </label>
+      </template>
 
-        <template v-else>
-          <label>
-            New password
-            <input v-model="password" type="password" autocomplete="new-password" minlength="8" required>
-          </label>
-          <label>
-            Confirm password
-            <input v-model="confirmPassword" type="password" autocomplete="new-password" minlength="8" required>
-          </label>
-        </template>
+      <p v-if="error" class="form-alert error">{{ error }}</p>
+      <p v-if="message" class="form-alert success">
+        <CheckCircle2 :size="16" />
+        {{ message }}
+      </p>
 
-        <p v-if="error" class="form-alert error">{{ error }}</p>
-        <p v-if="message" class="form-alert success">
-          <CheckCircle2 :size="16" />
-          {{ message }}
-        </p>
+      <button class="auth-primary-button" type="submit" :disabled="pending">
+        <Loader2 v-if="pending" :size="16" class="spin" />
+        <ArrowRight v-else :size="16" />
+        {{ step === 1 ? 'Send reset link' : 'Update password' }}
+      </button>
+    </form>
 
-        <button class="primary register-submit" type="submit" :disabled="pending">
-          <Loader2 v-if="pending" :size="16" class="spin" />
-          <ArrowRight v-else :size="16" />
-          {{ step === 1 ? 'Send reset link' : 'Update password' }}
-        </button>
-      </form>
-
-      <a class="support-link" href="/login">
+    <template #footer>
+      <a class="auth-inline-link" href="/login">
         <ArrowLeft :size="16" />
         Back to sign in
       </a>
-    </section>
-  </main>
+    </template>
+  </AuthPageShell>
 </template>
