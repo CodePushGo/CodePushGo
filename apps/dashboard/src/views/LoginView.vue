@@ -402,10 +402,6 @@ onMounted(async () => {
     <template #footer>
       <section class="auth-footer-actions">
         <a href="mailto:support@codepushgo.com" class="auth-ghost-button">Support</a>
-        <p class="auth-note icon-note">
-          <ShieldCheck :size="16" />
-          Auth is handled by the CodePushGo Supabase project.
-        </p>
       </section>
     </template>
   </AuthPageShell>

@@ -31,7 +31,7 @@ onMounted(() => {
   <main class="auth-shell compact-auth">
     <section class="auth-brand compact-brand">
       <a class="register-logo" href="/" aria-label="CodePushGo console">
-        <span class="mark">CG</span>
+        <img src="/codepushgo-logo.svg" alt="" width="42" height="42" class="auth-mobile-logo">
         <span>CodePushGo</span>
       </a>
       <div class="register-copy">

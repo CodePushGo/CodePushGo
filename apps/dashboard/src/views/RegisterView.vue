@@ -68,7 +68,7 @@ async function submit() {
   <main class="auth-shell auth-shell-register">
     <section class="auth-brand">
       <a class="register-logo" href="/" aria-label="CodePushGo console">
-        <span class="mark">CG</span>
+        <img src="/codepushgo-logo.svg" alt="" width="42" height="42" class="auth-mobile-logo">
         <span>CodePushGo</span>
       </a>
       <div class="register-copy">
