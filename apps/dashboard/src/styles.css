@@ -1792,7 +1792,7 @@ tr.active th {
   left: -8rem;
   width: 22rem;
   height: 22rem;
-  background: rgba(17, 97, 73, 0.22);
+  background: rgba(69, 107, 154, 0.22);
 }
 
 .auth-page-orb-b {
@@ -2026,7 +2026,7 @@ tr.active th {
 }
 
 .capgo-auth-input:focus {
-  outline: 2px solid rgba(17, 97, 73, 0.24);
+  outline: 2px solid rgba(69, 107, 154, 0.24);
   border-color: #456b9a;
 }
 
@@ -2050,7 +2050,7 @@ tr.active th {
   border-color: #456b9a;
   background: linear-gradient(135deg, #244366 0%, #456b9a 100%);
   color: #ffffff;
-  box-shadow: 0 20px 38px -26px rgba(17, 97, 73, 0.85);
+  box-shadow: 0 20px 38px -26px rgba(69, 107, 154, 0.85);
 }
 
 .auth-primary-button:hover:not(:disabled),
