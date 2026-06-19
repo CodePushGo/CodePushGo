@@ -1,0 +1,68 @@
+import type { Context } from 'hono'
+import type { MiddlewareKeyVariables } from '../../../utils/hono.ts'
+import type { Database } from '../../../utils/supabase.types.ts'
+import { type } from 'arktype'
+import { safeParseSchema } from '../../../utils/ark_validation.ts'
+import { BRES, simpleError } from '../../../utils/hono.ts'
+import { cloudlog } from '../../../utils/logging.ts'
+import { checkPermission } from '../../../utils/rbac.ts'
+import { supabaseApikey } from '../../../utils/supabase.ts'
+
+const inviteBodySchema = type({
+  orgId: 'string',
+  email: 'string.email',
+  invite_type: '"read" | "upload" | "write" | "admin" | "super_admin" | "org_member" | "org_billing_admin" | "org_admin" | "org_super_admin"',
+})
+
+const rbacInviteRoles = ['org_member', 'org_billing_admin', 'org_admin', 'org_super_admin'] as const
+const _legacyInviteRoles = ['read', 'upload', 'write', 'admin', 'super_admin'] as const
+
+type LegacyInviteRole = (typeof _legacyInviteRoles)[number]
+type RbacInviteRole = (typeof rbacInviteRoles)[number]
+
+const legacyToRbac: Partial<Record<LegacyInviteRole, RbacInviteRole>> = {
+  read: 'org_member',
+  upload: 'org_member',
+  write: 'org_member',
+  admin: 'org_admin',
+  super_admin: 'org_super_admin',
+}
+
+export async function post(c: Context<MiddlewareKeyVariables>, bodyRaw: any, _apikey: Database['public']['Tables']['apikeys']['Row']) {
+  const bodyParsed = safeParseSchema(inviteBodySchema, bodyRaw)
+  if (!bodyParsed.success) {
+    throw simpleError('invalid_body', 'Invalid body', { error: bodyParsed.error })
+  }
+  const body = bodyParsed.data
+
+  // Auth context is already set by middlewareKey
+  if (!(await checkPermission(c, 'org.invite_user', { orgId: body.orgId }))) {
+    throw simpleError('cannot_access_organization', 'You can\'t access this organization', { orgId: body.orgId })
+  }
+
+  const supabase = supabaseApikey(c, _apikey?.key)
+
+  const isRbacRole = rbacInviteRoles.includes(body.invite_type as RbacInviteRole)
+  const legacyInviteType = body.invite_type as LegacyInviteRole
+  const rbacRoleName = isRbacRole
+    ? (body.invite_type as RbacInviteRole)
+    : legacyToRbac[legacyInviteType]
+
+  if (!rbacRoleName)
+    throw simpleError('invalid_body', 'Invalid invite type', { invite_type: body.invite_type })
+
+  const { data, error } = await supabase.rpc('invite_user_to_org_rbac', {
+    email: body.email,
+    org_id: body.orgId,
+    role_name: rbacRoleName,
+  })
+
+  if (error) {
+    throw simpleError('error_inviting_user_to_organization', 'Error inviting user to organization', { error })
+  }
+  if (data && data !== 'OK') {
+    throw simpleError('error_inviting_user_to_organization', 'Error inviting user to organization', { data })
+  }
+  cloudlog({ requestId: c.get('requestId'), message: 'User invited to organization', data: { email: body.email, org_id: body.orgId } })
+  return c.json(BRES)
+}

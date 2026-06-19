@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "UVTJ336J2D.ee.forgr.capacitorgo",
+        "paths": [
+          "*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "UVTJ336J2D.ee.forgr.capacitorgo",
+      "UVTJ336J2D.ee.forgr.capgo.capacitor.autofull.save.password.v6"
+    ]
+  }
+}

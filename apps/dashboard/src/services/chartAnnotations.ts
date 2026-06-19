@@ -1,59 +1,80 @@
-interface ChartLike {
-  ctx?: CanvasRenderingContext2D | null | Record<string, unknown>
-  canvas?: { isConnected?: boolean } | null
-  chartArea?: { left?: number, right?: number }
-  scales?: {
-    x?: { getPixelForValue?: (value: unknown) => number }
-    y?: { getPixelForValue?: (value: unknown) => number }
+export interface AnnotationOptions {
+  line_?: {
+    yMin: number
+    yMax: number
+    borderColor: string
+    borderWidth: number
+  }
+  label_?: {
+    xValue: number
+    yValue: number
+    backgroundColor: string
+    content: string[]
+    borderWidth: number
+    font: {
+      size: number
+    }
+    color?: string
   }
 }
 
-function hasDrawableCanvas(chart: ChartLike) {
-  return !!chart.ctx && chart.canvas?.isConnected !== false
-}
+function getCanvasContext(ctx: unknown): CanvasRenderingContext2D | null {
+  if (ctx && typeof (ctx as CanvasRenderingContext2D).save === 'function')
+    return ctx as CanvasRenderingContext2D
 
-function callIfFunction<T extends object, K extends keyof T>(target: T, key: K, ...args: unknown[]) {
-  const fn = target[key]
-  if (typeof fn !== 'function')
-    return
-  const callable = fn as (...args: unknown[]) => unknown
-  callable(...args)
+  return null
 }
 
 export const inlineAnnotationPlugin = {
-  id: 'inlineAnnotation',
-  afterDatasetsDraw(chart: ChartLike, _args: unknown, options: Record<string, unknown> = {}) {
-    if (!hasDrawableCanvas(chart))
+  id: 'inlineAnnotationPlugin',
+  afterDatasetsDraw: (chart: any, args: any, options: AnnotationOptions) => {
+    const ctx = getCanvasContext(chart?.ctx)
+    if (!ctx)
       return
 
-    const ctx = chart.ctx as Record<string, unknown>
-    callIfFunction(ctx, 'save')
+    const { chartArea } = chart
+    const { left, right } = chartArea
 
-    for (const [key, annotation] of Object.entries(options)) {
-      if (!annotation || typeof annotation !== 'object')
-        continue
-      const record = annotation as Record<string, unknown>
+    Object.entries(options).forEach(([key, val]) => {
       if (key.startsWith('line_')) {
-        const yValue = typeof record.yMin === 'number' ? record.yMin : record.yMax
-        const y = chart.scales?.y?.getPixelForValue?.(yValue)
-        const left = chart.chartArea?.left
-        const right = chart.chartArea?.right
-        if (typeof y === 'number' && typeof left === 'number' && typeof right === 'number') {
-          callIfFunction(ctx, 'beginPath')
-          callIfFunction(ctx, 'moveTo', left, y)
-          callIfFunction(ctx, 'lineTo', right, y)
-          callIfFunction(ctx, 'stroke')
-        }
-      }
-      if (key.startsWith('label_')) {
-        const content = Array.isArray(record.content) ? record.content.join(' ') : String(record.content ?? '')
-        const x = chart.scales?.x?.getPixelForValue?.(record.xValue)
-        const y = chart.scales?.y?.getPixelForValue?.(record.yValue)
-        if (content && typeof x === 'number' && typeof y === 'number')
-          callIfFunction(ctx, 'fillText', content, x, y)
-      }
-    }
+        const { yMin, borderColor, borderWidth } = val
+        const yScale = chart.scales.y
+        const y = yScale.getPixelForValue(yMin)
 
-    callIfFunction(ctx, 'restore')
+        ctx.save()
+        ctx.beginPath()
+        ctx.moveTo(left, y) // Start the line at the left edge of the chart area
+        ctx.lineTo(right, y) // End the line at the right edge of the chart area
+        ctx.lineTo(chart.width, y)
+        ctx.lineWidth = borderWidth
+        ctx.strokeStyle = borderColor
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      if (key.startsWith('label_')) {
+        const { xValue, yValue, backgroundColor, content, font, color } = val
+        const xScale = chart.scales.x
+        const yScale = chart.scales.y
+        const x = xScale.getPixelForValue(xValue)
+        const y = yScale.getPixelForValue(yValue)
+
+        const labelWidth = ctx.measureText(content[0]).width + 10
+        const labelHeight = font.size + 6
+
+        ctx.save()
+        ctx.fillStyle = backgroundColor
+        ctx.fillRect(x - labelWidth / 2, y - labelHeight / 2, labelWidth, labelHeight)
+        ctx.restore()
+
+        ctx.save()
+        ctx.fillStyle = color ?? '#000'
+        ctx.font = `${font.size}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(content[0], x, y)
+        ctx.restore()
+      }
+    })
   },
 }

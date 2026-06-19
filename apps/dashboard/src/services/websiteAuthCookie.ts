@@ -1,58 +1,97 @@
-import { getLocalConfig } from './supabase'
+import { getLocalConfig } from '~/services/supabase'
 
-export interface WebsitePaidOrganization {
+const WEBSITE_PAID_USER_COOKIE_NAME = 'capgo_paid_user'
+const WEBSITE_PAID_USER_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
+
+interface WebsiteAuthOrganization {
   paying?: boolean | null
   role?: string | null
 }
 
-const cookieName = 'codepushgo_paid_user'
-const paidCookieMaxAgeSeconds = 30 * 24 * 60 * 60
-
-function isBrowser() {
-  return typeof document !== 'undefined' && typeof location !== 'undefined'
+function isCookieDomainUnsupported(hostname: string) {
+  return !hostname || hostname === 'localhost' || /^[\d.]+$/.test(hostname)
 }
 
-function rootDomainFromHost(host: string | undefined) {
-  if (!host)
-    return undefined
+function hostnameFromUrl(url: string | undefined) {
+  if (!url)
+    return null
+
   try {
-    const parsed = new URL(host)
-    const parts = parsed.hostname.split('.').filter(Boolean)
-    if (parts.length < 2)
-      return undefined
-    return `.${parts.slice(-2).join('.')}`
+    return new URL(url).hostname
   }
   catch {
-    return undefined
+    return null
   }
 }
 
-function cookieDomain() {
-  const config = getLocalConfig()
-  return rootDomainFromHost(config.hostWeb) ?? rootDomainFromHost(config.host)
+function getWebsiteCookieDomain() {
+  const { host, hostWeb } = getLocalConfig()
+  const hostname = (
+    hostnameFromUrl(hostWeb)
+    ?? hostnameFromUrl(host)
+    ?? globalThis.location?.hostname
+    ?? ''
+  )
+    .replace(/^www\./, '')
+    .replace(/^console\./, '')
+
+  if (isCookieDomainUnsupported(hostname))
+    return null
+
+  return `.${hostname}`
 }
 
-function writePaidCookie(value: string, maxAge: number, includeDomain: boolean) {
-  if (!isBrowser())
-    return
-  const secure = location.protocol === 'https:' ? '; Secure' : ''
-  const domain = includeDomain ? cookieDomain() : undefined
-  document.cookie = `${cookieName}=${value}; Path=/; Max-Age=${maxAge}; SameSite=Lax${domain ? `; Domain=${domain}` : ''}${secure}`
+function getCookieAttributes(maxAgeSeconds: number, domain?: string | null) {
+  const attributes = [
+    'Path=/',
+    `Max-Age=${maxAgeSeconds}`,
+    'SameSite=Lax',
+  ]
+
+  if (domain)
+    attributes.push(`Domain=${domain}`)
+
+  if (globalThis.location.protocol === 'https:')
+    attributes.push('Secure')
+
+  return attributes.join('; ')
 }
 
-function hasPaidNonInviteOrganization(organizations: WebsitePaidOrganization[]) {
-  return organizations.some(org => org.paying === true && !org.role?.startsWith('invite_'))
+function writeWebsiteCookie(name: string, value: string, maxAgeSeconds: number, domain?: string | null) {
+  document.cookie = `${name}=${value}; ${getCookieAttributes(maxAgeSeconds, domain)}`
+}
+
+function clearWebsiteCookie(name: string, domain?: string | null) {
+  writeWebsiteCookie(name, '', 0, domain)
+  if (domain)
+    writeWebsiteCookie(name, '', 0)
 }
 
 export function clearWebsitePaidUserCookie() {
-  writePaidCookie('', 0, true)
-  writePaidCookie('', 0, false)
+  if (typeof document === 'undefined')
+    return
+
+  const domain = getWebsiteCookieDomain()
+  clearWebsiteCookie(WEBSITE_PAID_USER_COOKIE_NAME, domain)
 }
 
-export function syncWebsitePaidUserCookieFromOrganizations(organizations: WebsitePaidOrganization[]) {
-  if (hasPaidNonInviteOrganization(organizations)) {
-    writePaidCookie('1', paidCookieMaxAgeSeconds, true)
+export function setWebsitePaidUserCookie(isPaidUser: boolean) {
+  if (typeof document === 'undefined')
+    return
+
+  if (!isPaidUser) {
+    clearWebsitePaidUserCookie()
     return
   }
-  clearWebsitePaidUserCookie()
+
+  const domain = getWebsiteCookieDomain()
+  writeWebsiteCookie(WEBSITE_PAID_USER_COOKIE_NAME, '1', WEBSITE_PAID_USER_COOKIE_MAX_AGE_SECONDS, domain)
+}
+
+export function syncWebsitePaidUserCookieFromOrganizations(organizations: WebsiteAuthOrganization[]) {
+  const hasPaidOrganization = organizations.some((organization) => {
+    return !organization.role?.includes('invite') && !!organization.paying
+  })
+
+  setWebsitePaidUserCookie(hasPaidOrganization)
 }

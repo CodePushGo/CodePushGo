@@ -1,0 +1,132 @@
+import type { MiddlewareKeyVariables } from '../utils/hono.ts'
+import type { Database } from '../utils/supabase.types.ts'
+import { Hono } from 'hono/tiny'
+import { BRES, middlewareAPISecret, parseBody, quickError, simpleError } from '../utils/hono.ts'
+import { cloudlog, cloudlogErr } from '../utils/logging.ts'
+import { getPath, s3 } from '../utils/s3.ts'
+import { supabaseAdmin } from '../utils/supabase.ts'
+
+export const app = new Hono<MiddlewareKeyVariables>()
+app.post('/', middlewareAPISecret, async (c) => {
+  // unsafe parse the body
+  const body = await parseBody<{ version: Database['public']['Tables']['app_versions']['Row'] }>(c)
+  cloudlog({ requestId: c.get('requestId'), message: 'post body cron_clear_versions', body })
+
+  // Let's start with the metadata
+  const supabase = supabaseAdmin(c)
+
+  const version = body.version
+  if (!version)
+    throw simpleError('no_version', 'No version', { body })
+
+  let ownerOrg = version.owner_org ?? null
+  const isUserIdMissing = version.user_id == null
+  if (isUserIdMissing || ownerOrg == null) {
+    // find user_id and owner_org from the app_id
+    const { data: app, error: errorApp } = await supabaseAdmin(c)
+      .from('apps')
+      .select('user_id, owner_org')
+      .eq('app_id', version.app_id)
+      .single()
+    if (errorApp)
+      throw simpleError('cannot_find_app_data', 'Cannot find app data for app_id', { error: errorApp, app_id: version.app_id })
+    if (!app)
+      throw simpleError('cannot_find_app_data', 'Cannot find app data for app_id', { error: 'no app found', app_id: version.app_id })
+    version.user_id ??= app.user_id
+    ownerOrg ??= app.owner_org ?? null
+  }
+
+  if (ownerOrg == null) {
+    throw simpleError('cannot_find_owner_org', 'Cannot find owner_org for app_id', { app_id: version.app_id })
+  }
+
+  let notFound = false
+  try {
+    const v2Path = await getPath(c, version)
+      .catch((e) => {
+        cloudlog({ requestId: c.get('requestId'), message: 'error getPath', error: e })
+        // if error is rate limit this terminate the function
+        if (e.message.includes('Rate limit exceeded')) {
+          return quickError(429, 'rate_limit_exceeded', 'Rate limit exceeded')
+        }
+        return null
+      })
+    cloudlog({ requestId: c.get('requestId'), message: 'v2Path', v2Path })
+    if (!v2Path) {
+      notFound = true
+      return quickError(404, 'no_path', 'No path', { versionId: version.id })
+    }
+    const size = await s3.getSize(c, v2Path).catch((e) => {
+      cloudlog({ requestId: c.get('requestId'), message: 'error getSize', error: e })
+      // if error is rate limit this terminate the function
+      if (e.message.includes('Rate limit exceeded')) {
+        return quickError(429, 'rate_limit_exceeded', 'Rate limit exceeded')
+      }
+      return null
+    })
+    if (!size) {
+      cloudlog({ requestId: c.get('requestId'), message: `No size for ${v2Path}, ${size}` })
+      // throw error to trigger the deletion
+      notFound = true
+      throw simpleError('no_size', 'No size', { versionId: version.id, v2Path })
+    }
+    // get checksum from table app_versions
+    const { data: appVersion, error: errorAppVersion } = await supabaseAdmin(c)
+      .from('app_versions')
+      .select('checksum')
+      .eq('id', version.id)
+      .single()
+    if (errorAppVersion)
+      throw simpleError('cannot_find_checksum', 'Cannot find checksum for app_versions id', { error: errorAppVersion })
+    if (!appVersion)
+      throw simpleError('cannot_find_checksum', 'Cannot find checksum for app_versions id', { error: 'no app_versions found' })
+    const checksum = appVersion.checksum
+    if (!checksum) {
+      cloudlog({ requestId: c.get('requestId'), message: `No checksum for ${v2Path}, ${checksum}` })
+    }
+
+    cloudlog({ requestId: c.get('requestId'), message: `Upsert app_versions_meta (version id: ${version.id}) to: ${size}` })
+
+    await supabase.from('app_versions_meta')
+      .upsert({
+        id: version.id,
+        app_id: version.app_id,
+        checksum: checksum ?? '',
+        size,
+        owner_org: ownerOrg,
+      }, { onConflict: 'id' })
+  }
+  catch (errorSize) {
+    if (errorSize instanceof Error && errorSize.message.includes('Rate limit exceeded')) {
+      cloudlog({ requestId: c.get('requestId'), message: 'Rate limit exceeded', error: errorSize })
+      return c.json({ status: 'Rate limit exceeded' }, 429)
+    }
+    cloudlogErr({ requestId: c.get('requestId'), message: 'errorSize', notFound, error: errorSize })
+    // Ensure that the version is not linked anywhere
+    const { count, error, data } = await supabase.from('channels')
+      .select('id', { count: 'exact' })
+      .eq('version', version.id)
+
+    if (error)
+      throw simpleError('cannot_check_channel_count', 'Cannot check channel count', { error })
+
+    if ((count ?? 0) > 0) {
+      if (notFound) {
+        await supabase.from('channels')
+          .update({ version: null })
+          .eq('version', version.id)
+      }
+      else {
+        throw simpleError('cannot_delete_failed_version', 'Cannot delete failed version', { error: `linked in some channels (${data.map(d => d.id).join(', ')})` })
+      }
+    }
+
+    const { error: error1 } = await supabase.from('app_versions')
+      .delete()
+      .eq('id', version.id)
+
+    if (error1)
+      throw simpleError('cannot_delete_version', 'Cannot delete version', { error: error1 })
+  }
+  return c.json(BRES)
+})

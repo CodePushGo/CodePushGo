@@ -1,0 +1,199 @@
+{
+  "name": "capgo_api",
+  "logpush": true,
+  "compatibility_date": "2026-04-21",
+  "main": "./index.ts",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
+  ],
+  "placement": {
+    "mode": "smart"
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "workers_dev": false,
+  "upload_source_maps": true,
+  "env": {
+    "prod": {
+      "name": "capgo_api-prod",
+      "ai": {
+        "binding": "AI"
+      },
+      "vars": {
+        "ENV_NAME": "capgo_api-prod"
+      },
+      "routes": [
+        {
+          "pattern": "api.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "api.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
+      },
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }]
+    },
+    "preprod": {
+      "name": "capgo_api-preprod",
+      "ai": {
+        "binding": "AI"
+      },
+      "vars": {
+        "ENV_NAME": "capgo_api-preprod"
+      },
+      "routes": [
+        {
+          "pattern": "api.preprod.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "api.preprod.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "observability": {
+        "enabled": true
+      },
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "9c405a5248604951a2a12125799bc21b" }]
+    },
+    "alpha": {
+      "name": "capgo_api-alpha",
+      "ai": {
+        "binding": "AI"
+      },
+      "vars": {
+        "ENV_NAME": "capgo_api-alpha"
+      },
+      "routes": [
+        {
+          "pattern": "api.dev.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "api.dev.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "observability": {
+        "enabled": true
+      },
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage_alpha"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage_alpha"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage_alpha"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log_alpha"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external_alpha"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info_alpha"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "16a85350d8a246ff857a645c8f51d6ae" }]
+    },
+    "local": {
+      "name": "capgo_api-local",
+      "ai": {
+        "binding": "AI"
+      },
+      "vars": {
+        "ENV_NAME": "capgo_api-local"
+      },
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "00000000000000000000000000000001" }]
+    }
+  }
+}

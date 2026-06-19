@@ -1,66 +1,83 @@
-export interface ResolvedImagePath {
-  normalized: string
-  shouldSign: boolean
-}
+import { useSupabase } from './supabase'
 
-export interface CreateSignedImageUrlOptions {
-  forceRefresh?: boolean
-}
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7
+const SIGNED_URL_CACHE_MAX_AGE_MS = 15 * 60 * 1000
+const MAX_CACHE_ENTRIES = 500
+const STORAGE_URL_REGEX = /\/storage\/v1\/object(?:\/(public|sign))?\/images\/(.+)$/
+const signedUrlCache = new Map<string, { url: string, expiresAt: number }>()
 
-const signedImageCache = new Map<string, { url: string, expiresAt: number }>()
-const signedImageCacheMaxAgeMs = 15 * 60 * 1000
-const signedImagesPathMarker = '/storage/v1/object/sign/images/'
+export function resolveImagePath(raw?: string | null) {
+  if (!raw)
+    return { normalized: '', shouldSign: false }
 
-function trimPath(value: string | null | undefined) {
-  return value?.trim().replace(/^\/+/, '') ?? ''
-}
+  const trimmed = raw.trim()
+  if (!trimmed)
+    return { normalized: '', shouldSign: false }
 
-function signedImagePathFromUrl(value: string) {
   try {
-    const parsed = new URL(value)
-    const markerIndex = parsed.pathname.indexOf(signedImagesPathMarker)
-    if (markerIndex === -1)
-      return null
-    return decodeURIComponent(parsed.pathname.slice(markerIndex + signedImagesPathMarker.length)).replace(/^\/+/, '')
+    const url = new URL(trimmed)
+    const match = url.pathname.match(STORAGE_URL_REGEX)
+    if (match?.[2]) {
+      return {
+        normalized: decodeURIComponent(match[2]).replace(/^\/+/, ''),
+        shouldSign: true,
+      }
+    }
+
+    return {
+      normalized: trimmed,
+      shouldSign: false,
+    }
   }
   catch {
-    return null
+    return {
+      normalized: trimmed.replace(/^images\//, '').replace(/^\/+/, ''),
+      shouldSign: true,
+    }
   }
 }
 
-export function resolveImagePath(raw: string | null | undefined): ResolvedImagePath {
-  const normalized = trimPath(raw)
-  if (!normalized)
-    return { normalized: '', shouldSign: false }
-  const signedPath = signedImagePathFromUrl(normalized)
-  if (signedPath)
-    return { normalized: signedPath, shouldSign: true }
-  if (/^https?:\/\//i.test(normalized) || normalized.startsWith('data:'))
-    return { normalized, shouldSign: false }
-  return { normalized: normalized.replace(/^images\//, ''), shouldSign: true }
-}
-
-export function getImmediateImageUrl(raw: string | null | undefined) {
+export function getImmediateImageUrl(raw?: string | null) {
   const { normalized, shouldSign } = resolveImagePath(raw)
   return shouldSign ? '' : normalized
 }
 
-export async function createSignedImageUrl(raw: string | null | undefined, options: CreateSignedImageUrlOptions = {}) {
-  const { normalized, shouldSign } = resolveImagePath(raw)
+export async function createSignedImageUrl(path?: string | null, options: { forceRefresh?: boolean } = {}) {
+  const { normalized, shouldSign } = resolveImagePath(path)
+  if (!normalized)
+    return ''
+
   if (!shouldSign)
     return normalized
 
-  const cached = signedImageCache.get(normalized)
-  if (!options.forceRefresh && cached && cached.expiresAt > Date.now())
-    return cached.url
+  const cacheKey = `images:${normalized}`
+  if (options.forceRefresh) {
+    signedUrlCache.delete(cacheKey)
+  }
+  else {
+    const cached = signedUrlCache.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now())
+      return cached.url
+    if (cached)
+      signedUrlCache.delete(cacheKey)
+  }
 
-  const response = await fetch(`/storage/sign?path=${encodeURIComponent(normalized)}`)
-  if (!response.ok)
+  const { data, error } = await useSupabase()
+    .storage
+    .from('images')
+    .createSignedUrl(normalized, SIGNED_URL_TTL_SECONDS)
+
+  if (error || !data?.signedUrl)
     return ''
 
-  const body = await response.json() as { url?: string }
-  const url = body.url ?? ''
-  if (url)
-    signedImageCache.set(normalized, { url, expiresAt: Date.now() + signedImageCacheMaxAgeMs })
-  return url
+  signedUrlCache.set(cacheKey, {
+    url: data.signedUrl,
+    expiresAt: Date.now() + Math.min(SIGNED_URL_TTL_SECONDS * 1000, SIGNED_URL_CACHE_MAX_AGE_MS),
+  })
+  if (signedUrlCache.size > MAX_CACHE_ENTRIES) {
+    const oldestKey = signedUrlCache.keys().next().value
+    if (oldestKey)
+      signedUrlCache.delete(oldestKey)
+  }
+  return data.signedUrl
 }

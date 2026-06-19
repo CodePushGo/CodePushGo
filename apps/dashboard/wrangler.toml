@@ -1,6 +1,10 @@
 name = "codepushgo-console"
 compatibility_date = "2026-06-16"
 
+routes = [
+  { pattern = "console.codepushgo.com", custom_domain = true }
+]
+
 [assets]
 directory = "./dist"
 not_found_handling = "single-page-application"

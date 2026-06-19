@@ -1,14 +1,60 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": [
-      "vite/client"
+    "target": "es2020",
+    "jsx": "preserve",
+    "lib": [
+      "DOM",
+      "ESNext"
     ],
-    "jsx": "preserve"
+    "moduleDetection": "force",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "~/*": [
+        "./src/*"
+      ]
+    },
+    "resolveJsonModule": true,
+    "types": [
+      "@intlify/unplugin-vue-i18n/messages",
+      "@cloudflare/workers-types",
+      "unplugin-icons/types/vue",
+      "vitest",
+      "vite/client",
+      "vite-plugin-vue-layouts/client",
+      "unplugin-vue-macros/macros-global",
+      "vue-router/auto"
+    ],
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.vue",
-    "vite.config.ts"
+  "vueCompilerOptions": {
+    "plugins": [
+      "unplugin-vue-macros/volar"
+    ]
+  },
+  "exclude": [
+    "dist",
+    "node_modules",
+    "scripts",
+    "supabase/functions/_script",
+    "cypress",
+    "cli",
+    "benches",
+    "vite.config.mts",
+    "temp_cli_test",
+    "tests/device_comparison.test.ts",
+    "tests/ai-analysis-telemetry.unit.test.ts",
+    "tests/builder-onboarding-telemetry.unit.test.ts",
+    "tests/builder-upload-telemetry.unit.test.ts",
+    "tests/onboarding-error-categories.unit.test.ts"
   ]
 }

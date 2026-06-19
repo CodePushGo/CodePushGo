@@ -1,0 +1,145 @@
+<script setup lang="ts">
+import type { Database } from '~/types/supabase.types'
+import { storeToRefs } from 'pinia'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
+import { useSupabase } from '~/services/supabase'
+import { useDisplayStore } from '~/stores/display'
+import { useOrganizationStore } from '~/stores/organization'
+
+const route = useRoute('/dashboard')
+const organizationStore = useOrganizationStore()
+const isLoading = ref(true)
+const supabase = useSupabase()
+const { t } = useI18n()
+const displayStore = useDisplayStore()
+const apps = ref<Database['public']['Tables']['apps']['Row'][]>([])
+// Scroll container ref - used to reset scroll when a blocking overlay activates
+const scrollContainer = ref<HTMLElement | null>(null)
+
+const { currentOrganization } = storeToRefs(organizationStore)
+
+// Check if user lacks security compliance (2FA or password) - don't load data in this case
+const lacksSecurityAccess = computed(() => {
+  const org = organizationStore.currentOrganization
+  const lacks2FA = org?.enforcing_2fa === true && org?.['2fa_has_access'] === false
+  const lacksPassword = org?.password_policy_config?.enabled && org?.password_has_access === false
+  return lacks2FA || lacksPassword
+})
+
+// Only show empty state overlay if user has no apps AND is not in a failed/restricted state
+const hasNoApps = computed(() => {
+  return apps.value.length === 0
+    && !isLoading.value
+    && !organizationStore.currentOrganizationFailed
+    && !lacksSecurityAccess.value
+})
+
+// Payment failed state (subscription required)
+const paymentFailed = computed(() => {
+  return organizationStore.currentOrganizationFailed && !lacksSecurityAccess.value
+})
+
+// Should blur the content (either no apps OR payment failed)
+const shouldBlurContent = computed(() => hasNoApps.value || paymentFailed.value)
+
+// Locking the scroll container with `overflow-hidden` preserves its current
+// scrollTop. If the user had already scrolled (e.g. before the overlay resolved,
+// or after switching to a failed org), the absolutely-positioned overlay would
+// stay anchored to the top of the scroll content and end up above the viewport,
+// out of reach. Reset the scroll position when the overlay activates so it stays
+// centered in view.
+watch(shouldBlurContent, (blur) => {
+  if (blur && scrollContainer.value)
+    scrollContainer.value.scrollTop = 0
+}, { flush: 'post' })
+
+async function getMyApps() {
+  await organizationStore.awaitInitialLoad()
+
+  // Don't fetch apps if user lacks security access - data would be rejected anyway
+  if (lacksSecurityAccess.value) {
+    apps.value = []
+    return
+  }
+
+  const currentGid = organizationStore.currentOrganization?.gid
+
+  if (!currentGid) {
+    console.error('Current organization is null, cannot fetch apps')
+    apps.value = []
+    return
+  }
+
+  const { data } = await supabase
+    .from('apps')
+    .select()
+    .eq('owner_org', currentGid)
+
+  apps.value = data ?? []
+}
+
+watch(currentOrganization, async () => {
+  await getMyApps()
+})
+
+onMounted(async () => {
+  if (route.path === '/dashboard') {
+    isLoading.value = true
+    await getMyApps()
+    isLoading.value = false
+    displayStore.NavTitle = t('dashboard')
+  }
+})
+displayStore.NavTitle = t('dashboard')
+displayStore.defaultBack = '/apps'
+</script>
+
+<template>
+  <div>
+    <div class="overflow-hidden pb-4 h-full">
+      <div
+        ref="scrollContainer"
+        class="relative px-4 pt-2 mx-auto mb-8 w-full h-full sm:px-6 md:pt-8 lg:px-8 max-w-9xl max-h-fit"
+        :class="shouldBlurContent ? 'overflow-hidden' : 'overflow-y-auto'"
+      >
+        <!-- Only show FailedCard for security access issues (2FA/password) -->
+        <FailedCard v-if="lacksSecurityAccess" />
+
+        <!-- Trial subscription banner -->
+        <TrialBanner />
+
+        <!-- Dashboard content - blurred when no apps or payment failed -->
+        <div :class="{ 'blur-sm pointer-events-none select-none': shouldBlurContent }">
+          <Usage v-if="!lacksSecurityAccess" :force-demo="paymentFailed" />
+        </div>
+
+        <!-- Overlay for empty state (no apps) -->
+        <div
+          v-if="hasNoApps"
+          class="flex absolute inset-0 z-10 flex-col justify-center items-center bg-white/60 dark:bg-gray-900/60"
+        >
+          <div class="p-8 text-center bg-white rounded-xl border shadow-lg dark:bg-gray-800 dark:border-gray-700">
+            <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+              {{ t('no-apps-yet') }}
+            </h2>
+            <p class="mb-6 text-gray-600 dark:text-gray-400">
+              {{ t('add-your-first-app-to-see-dashboard') }}
+            </p>
+            <router-link
+              to="/app/new"
+              class="inline-flex gap-2 items-center px-6 py-3 text-white bg-blue-600 rounded-lg transition-colors hover:bg-blue-700"
+            >
+              <span class="i-heroicons-plus-circle text-xl" />
+              {{ t('add-app') }}
+            </router-link>
+          </div>
+        </div>
+
+        <!-- Overlay for payment failure -->
+        <PaymentRequiredModal v-if="paymentFailed" />
+      </div>
+    </div>
+  </div>
+</template>

@@ -855,7 +855,7 @@ CREATE OR REPLACE VIEW public.app_versions
 WITH (security_barrier = true)
 AS
 SELECT
-  encode(digest(releases.app_id || ':' || releases.platform || ':' || releases.channel || ':' || releases.version, 'sha256'), 'hex') AS id,
+  encode(extensions.digest(releases.app_id || ':' || releases.platform || ':' || releases.channel || ':' || releases.version, 'sha256'), 'hex') AS id,
   releases.app_id,
   releases.version,
   releases.platform,
@@ -873,7 +873,7 @@ WHERE EXISTS (
   SELECT 1
   FROM public.apikeys
   JOIN public.apikey_bindings ON apikey_bindings.apikey_id = apikeys.id
-  WHERE apikeys.key_hash = encode(digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')
+  WHERE apikeys.key_hash = encode(extensions.digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')
     AND (apikeys.expires_at IS NULL OR apikeys.expires_at > now())
     AND (
       (apikey_bindings.scope_type = 'app' AND apikey_bindings.app_id = releases.app_id)
@@ -1335,7 +1335,7 @@ SET search_path = public
 AS $$
   SELECT apikeys.rbac_id
   FROM public.apikeys
-  WHERE apikeys.key_hash = encode(digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')
+  WHERE apikeys.key_hash = encode(extensions.digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')
     AND (apikeys.expires_at IS NULL OR apikeys.expires_at > now())
     AND cardinality(keymode) > 0
   LIMIT 1;
@@ -1505,7 +1505,7 @@ CREATE TABLE IF NOT EXISTS public.webhooks (
   org_id TEXT NOT NULL REFERENCES public.orgs(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   url TEXT NOT NULL,
-  secret TEXT NOT NULL DEFAULT ('whsec_' || encode(gen_random_bytes(32), 'base64')),
+  secret TEXT NOT NULL DEFAULT ('whsec_' || encode(extensions.gen_random_bytes(32), 'base64')),
   enabled BOOLEAN NOT NULL DEFAULT true,
   events JSONB NOT NULL DEFAULT '[]'::jsonb,
   delivery_version TEXT NOT NULL DEFAULT 'legacy' CHECK (delivery_version IN ('legacy', 'standard')),

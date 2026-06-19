@@ -1,62 +1,69 @@
-export function isStaleAssetErrorMessage(message: string | undefined) {
+const STALE_ASSET_ERROR_PATTERNS = [
+  /Failed to fetch dynamically imported module/i,
+  /error loading dynamically imported module/i,
+  /Importing a module script failed/i,
+  /Unable to preload CSS/i,
+  /text\/html.*is not a valid JavaScript MIME type/i,
+  /Loading chunk [\w-]+ failed/i,
+  /Loading CSS chunk [\w-]+ failed/i,
+]
+
+const KNOWN_CRAWLER_ERROR_PATTERNS = [
+  /Object Not Found Matching Id:\d+(?:,\s*MethodName:[^,]+,\s*ParamCount:\d+)?/i,
+]
+
+export function isStaleAssetErrorMessage(message: string | undefined): boolean {
   if (!message)
     return false
-  const normalized = message.toLowerCase()
-  return normalized.includes('failed to fetch dynamically imported module:')
-    || normalized.includes('error loading dynamically imported module:')
-    || normalized.includes('importing a module script failed')
-    || normalized.includes('unable to preload css for')
-    || normalized.includes("'text/html' is not a valid javascript mime type")
+
+  return STALE_ASSET_ERROR_PATTERNS.some(pattern => pattern.test(message))
 }
 
-export function isKnownCrawlerNoiseErrorMessage(message: string | undefined) {
+export function isKnownCrawlerNoiseErrorMessage(message: string | undefined): boolean {
   if (!message)
     return false
-  return /object not found matching id:\d+/i.test(message)
+
+  return KNOWN_CRAWLER_ERROR_PATTERNS.some(pattern => pattern.test(message))
 }
 
 export function getErrorMessage(value: unknown): string | undefined {
-  if (value instanceof Error)
-    return value.message
-  if (typeof value === 'object' && value !== null && 'message' in value && typeof (value as { message?: unknown }).message === 'string')
-    return (value as { message: string }).message
   if (typeof value === 'string')
     return value
+
+  if (value instanceof Error)
+    return value.message
+
+  if (typeof value === 'object' && value !== null) {
+    const candidate = (value as { message?: unknown }).message
+    if (typeof candidate === 'string')
+      return candidate
+  }
+
   return undefined
 }
 
-export function shouldSuppressPostHogExceptionEvent(event: unknown) {
-  if (!isRecord(event) || event.event !== '$exception' || !isRecord(event.properties))
+interface PostHogExceptionLike {
+  value?: unknown
+  $exception_value?: unknown
+}
+
+interface PostHogEventLike {
+  event?: unknown
+  properties?: {
+    $exception_list?: PostHogExceptionLike[]
+    $exception_values?: unknown[]
+  }
+}
+
+export function shouldSuppressPostHogExceptionEvent(event: PostHogEventLike): boolean {
+  if (event.event !== '$exception')
     return false
-  return exceptionMessages(event.properties).some(message => isStaleAssetErrorMessage(message) || isKnownCrawlerNoiseErrorMessage(message))
-}
 
-function exceptionMessages(properties: Record<string, unknown>) {
-  const messages: string[] = []
-  const exceptionList = properties.$exception_list
-  if (Array.isArray(exceptionList)) {
-    for (const item of exceptionList) {
-      if (isRecord(item)) {
-        const message = getErrorMessage(item.value) ?? getErrorMessage(item.message)
-        if (message)
-          messages.push(message)
-      }
-    }
-  }
-  const exceptionValues = properties.$exception_values
-  if (Array.isArray(exceptionValues)) {
-    for (const value of exceptionValues) {
-      const message = getErrorMessage(value)
-      if (message)
-        messages.push(message)
-    }
-  }
-  const directMessage = getErrorMessage(properties.$exception_message)
-  if (directMessage)
-    messages.push(directMessage)
-  return messages
-}
+  const exception = event.properties?.$exception_list?.[0]
+  const exceptionValue = getErrorMessage(exception?.value) ?? getErrorMessage(exception?.$exception_value)
+  if (isStaleAssetErrorMessage(exceptionValue) || isKnownCrawlerNoiseErrorMessage(exceptionValue))
+    return true
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  const fallbackValue = getErrorMessage(event.properties?.$exception_values?.[0])
+  return isStaleAssetErrorMessage(fallbackValue) || isKnownCrawlerNoiseErrorMessage(fallbackValue)
 }

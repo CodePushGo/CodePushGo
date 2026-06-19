@@ -1,0 +1,1129 @@
+{
+  "name": "capgo_plugin",
+  "logpush": true,
+  "compatibility_date": "2026-04-21",
+  "main": "./index.ts",
+  "compatibility_flags": [
+    "nodejs_compat",
+    // "enable_workers_observability_tracing",
+    "nodejs_compat_populate_process_env"
+  ],
+  "workers_dev": false,
+  "upload_source_maps": true,
+  "env": {
+    "prod_eu": {
+      "name": "capgo_plugin-eu-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-eu-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:europe-west8"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.eu.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.eu.usecapgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.usecapgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "updater.spencer.co/*",
+          "zone_name": "codepushgo.com"
+        },
+        {
+          "pattern": "updater.capgo.com.cn/*",
+          "zone_name": "codepushgo.com"
+        },
+        // TODO: remove this it's deprecated
+        {
+          "pattern": "api.codepushgo.com/plugin/*",
+          "zone_name": "codepushgo.com"
+        },
+        {
+          "pattern": "api.codepushgo.com/updates*",
+          "zone_name": "codepushgo.com"
+        },
+        {
+          "pattern": "api.codepushgo.com/channel_self",
+          "zone_name": "codepushgo.com"
+        },
+        {
+          "pattern": "api.codepushgo.com/stats",
+          "zone_name": "codepushgo.com"
+        }
+        // end of TODO
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_me": {
+      "name": "capgo_plugin-me-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-me-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:me-central1"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.me.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.me.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_hk": {
+      "name": "capgo_plugin-hk-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-hk-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:asia-east2"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.hk.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.hk.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_jp": {
+      "name": "capgo_plugin-jp-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-jp-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:asia-northeast1"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.jp.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.jp.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_as": {
+      "name": "capgo_plugin-as-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-as-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:asia-south1"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.as.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.as.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_na": {
+      "name": "capgo_plugin-na-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-na-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:us-east5"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.na.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.na.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_af": {
+      "name": "capgo_plugin-af-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-af-prod"
+      },
+      "placement": {
+        "region": "gcp:africa-south1"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "routes": [
+        {
+          "pattern": "plugin.af.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.af.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_oc": {
+      "name": "capgo_plugin-oc-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-oc-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:australia-southeast1"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.oc.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.oc.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ]
+    },
+    "prod_sa": {
+      "name": "capgo_plugin-sa-prod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-sa-prod"
+      },
+      "observability": {
+        "head_sampling_rate": 0.001,
+        "enabled": true
+      },
+      "placement": {
+        "region": "gcp:southamerica-east1"
+      },
+      "routes": [
+        {
+          "pattern": "plugin.sa.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.sa.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "2860ca0f6b1e416fb8651792895cbffa" }],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        }
+      ]
+    },
+    "preprod": {
+      "name": "capgo_plugin-eu-preprod",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-eu-preprod"
+      },
+      "observability": {
+        "head_sampling_rate": 1,
+        "enabled": true
+      },
+      "routes": [
+        {
+          "pattern": "plugin.preprod.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "plugin.preprod.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "9c405a5248604951a2a12125799bc21b" }],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external"
+        }
+      ],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ],
+      "placement": {
+        "region": "gcp:europe-west8"
+      }
+    },
+    "alpha": {
+      "name": "capgo_plugin-alpha",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-alpha"
+      },
+      "observability": {
+        "head_sampling_rate": 1,
+        "enabled": true
+      },
+      "routes": [
+        {
+          "pattern": "plugin.dev.codepushgo.com",
+          "custom_domain": true
+        },
+        {
+          "pattern": "api.dev.usecapgo.com",
+          "custom_domain": true
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB_STOREAPPS",
+          "database_name": "capgo_prod_storeapps",
+          "database_id": "81236a0c-db6e-454d-87da-944fa9bc100c"
+        }
+      ],
+      "kv_namespaces": [{ "binding": "CHANNEL_SELF_STORE", "id": "16a85350d8a246ff857a645c8f51d6ae" }],
+      "analytics_engine_datasets": [
+        {
+          "binding": "DEVICE_USAGE",
+          "dataset": "device_usage_alpha"
+        },
+        {
+          "binding": "BANDWIDTH_USAGE",
+          "dataset": "bandwidth_usage_alpha"
+        },
+        {
+          "binding": "VERSION_USAGE",
+          "dataset": "version_usage_alpha"
+        },
+        {
+          "binding": "APP_LOG",
+          "dataset": "app_log_alpha"
+        },
+        {
+          "binding": "APP_LOG_EXTERNAL",
+          "dataset": "app_log_external_alpha"
+        },
+        {
+          "binding": "DEVICE_INFO",
+          "dataset": "device_info_alpha"
+        }
+      ],
+      "hyperdrive": [
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_DIRECT_EU",
+          "id": "ae1fe6178b564adc9fc9a71ccc769a35"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_NA",
+          "id": "a09d6932219c4a6a918fe6fdad5565ae"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_EU",
+          "id": "d5aae8be75f446868352110502fa9a1e"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_SA",
+          "id": "f874494b5d7b45ff82fd79778a6b2c7f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_OC",
+          "id": "01688f6b86784166abdfa4105f58933f"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_JAPAN",
+          "id": "a67b33ba7ef54219978ec56eca5096e1"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AS_INDIA",
+          "id": "7f6e8255a9124531b1b07f11fdc257a7"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_HK",
+          "id": "f9b9990c5ee34327947299bd5e70d273"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_AF",
+          "id": "339dcaae4c204d808903a6dc6fa372d0"
+        },
+        {
+          "binding": "HYPERDRIVE_CODEPUSHGO_READ_ME",
+          "id": "0efae3d612984c16b030f1447e269442"
+        }
+      ],
+      "placement": {
+        "region": "gcp:europe-west8"
+      }
+    },
+    "local": {
+      "name": "capgo_plugin-local",
+      "vars": {
+        "ENV_NAME": "capgo_plugin-local",
+        "CODEPUSHGO_PREVENT_BACKGROUND_FUNCTIONS": "true"
+      }
+    }
+  }
+}

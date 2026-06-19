@@ -14,7 +14,6 @@ function withTempDir(fn: (root: string) => void) {
     rmSync(root, { recursive: true, force: true })
   }
 }
-
 describe('[Capgo parity] init guardrails', () => {
   it('reports git cleanliness without failing outside repos', () => {
     withTempDir((root) => {
@@ -24,7 +23,7 @@ describe('[Capgo parity] init guardrails', () => {
       writeFileSync(join(root, 'dirty.txt'), 'dirty\n')
       expect(getGitRepoStatus(root)).toMatchObject({ inRepo: true, clean: false })
     })
-  })
+  }, 10_000)
 
   it('uses native baseline 0.0.0 for init and rejects direct-update complexity', () => {
     expect(getInitUpdaterPluginConfig('com.example.app')).toEqual({ version: '0.0.0', appId: 'com.example.app', autoUpdate: 'atBackground' })

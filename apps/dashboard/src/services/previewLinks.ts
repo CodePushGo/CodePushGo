@@ -1,71 +1,164 @@
-export type PreviewLink = ChannelPreviewLink | BundlePreviewLink
-
 export interface ChannelPreviewLink {
   type: 'channel'
   appId: string
-  channelId: number
+  channelId?: number
   channelName: string
   payloadUrl?: string
 }
 
 export interface BundlePreviewLink {
   type: 'bundle'
-  appId: string
-  versionId: number
+  appId?: string
+  versionId?: number
   payloadUrl?: string
 }
 
-export interface BuildChannelPreviewDeepLinkInput {
+export type PreviewDeepLink = ChannelPreviewLink | BundlePreviewLink
+
+const CHANNEL_PREVIEW_PATH = '/preview/channel'
+const BUNDLE_PREVIEW_PATH = '/preview/bundle'
+const CHANNEL_PREVIEW_SCHEME_URL = 'capgo://preview/channel'
+const BUNDLE_PREVIEW_SCHEME_URL = 'capgo://preview/bundle'
+const LOCAL_PREVIEW_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value.trim())
+  }
+  catch {
+    return null
+  }
+}
+
+function isAllowedWebPreviewHost(hostname: string) {
+  const normalizedHostname = hostname.toLowerCase()
+  return LOCAL_PREVIEW_HOSTS.has(normalizedHostname)
+    || normalizedHostname === 'codepushgo.com'
+    || normalizedHostname === 'console.codepushgo.com'
+    || /^console\.(?:dev|preprod|staging)\.codepushgo\.com$/.test(normalizedHostname)
+}
+
+function isPreviewLinkOriginAllowed(url: URL) {
+  if (url.protocol === 'capgo:')
+    return true
+
+  if (url.protocol === 'https:')
+    return isAllowedWebPreviewHost(url.hostname)
+
+  if (url.protocol === 'http:')
+    return LOCAL_PREVIEW_HOSTS.has(url.hostname.toLowerCase())
+
+  return false
+}
+
+function getPreviewPath(url: URL) {
+  if (url.protocol !== 'capgo:')
+    return url.pathname
+
+  const hostPath = url.hostname ? `/${url.hostname}${url.pathname}` : url.pathname
+  return hostPath.replace(/\/+/g, '/')
+}
+
+function getTrimmedParam(url: URL, ...names: string[]) {
+  for (const name of names) {
+    const value = url.searchParams.get(name)?.trim()
+    if (value)
+      return value
+  }
+  return undefined
+}
+
+function parseSafeIntegerParam(url: URL, names: string[], options: { min: number }) {
+  const value = getTrimmedParam(url, ...names)
+  if (!value || !/^\d+$/.test(value))
+    return undefined
+
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isSafeInteger(parsed) || parsed < options.min)
+    return undefined
+
+  return parsed
+}
+
+function getHttpUrlParam(url: URL, ...names: string[]) {
+  for (const name of names) {
+    const value = url.searchParams.get(name)?.trim()
+    const parsed = value ? parseUrl(value) : null
+    if (parsed && (parsed.protocol === 'https:' || parsed.protocol === 'http:'))
+      return parsed.toString()
+  }
+  return undefined
+}
+
+export function buildChannelPreviewDeepLink(options: {
   appId: string
-  channelId: number
+  channelId?: number
   channelName: string
   payloadUrl?: string
   origin?: string
+}) {
+  const url = options.origin
+    ? new URL(CHANNEL_PREVIEW_PATH, options.origin)
+    : new URL(CHANNEL_PREVIEW_SCHEME_URL)
+  url.searchParams.set('appId', options.appId)
+  url.searchParams.set('channel', options.channelName)
+  if (typeof options.channelId === 'number')
+    url.searchParams.set('channelId', String(options.channelId))
+  if (options.payloadUrl)
+    url.searchParams.set('url', options.payloadUrl)
+  return url.toString()
 }
 
-export interface BuildBundlePreviewDeepLinkInput {
-  appId: string
-  versionId: number
+export function buildBundlePreviewDeepLink(options: {
+  appId?: string
+  versionId?: number
   payloadUrl?: string
   origin?: string
+}) {
+  const url = options.origin
+    ? new URL(BUNDLE_PREVIEW_PATH, options.origin)
+    : new URL(BUNDLE_PREVIEW_SCHEME_URL)
+  if (options.payloadUrl)
+    url.searchParams.set('url', options.payloadUrl)
+  if (options.appId)
+    url.searchParams.set('appId', options.appId)
+  if (typeof options.versionId === 'number')
+    url.searchParams.set('versionId', String(options.versionId))
+  return url.toString()
 }
 
-const nativeScheme = 'codepushgo'
-const trustedHttpsHosts = new Set(['web.codepushgo.app', 'codepushgo.app'])
-const trustedLocalHosts = new Set(['localhost', '127.0.0.1', '[::1]'])
-
-export function buildChannelPreviewDeepLink(input: BuildChannelPreviewDeepLinkInput) {
-  const url = createPreviewUrl('/preview/channel', input.origin)
-  url.searchParams.set('appId', input.appId)
-  url.searchParams.set('channel', input.channelName)
-  url.searchParams.set('channelId', String(input.channelId))
-  if (input.payloadUrl)
-    url.searchParams.set('url', input.payloadUrl)
-  return formatPreviewUrl(url, input.origin)
-}
-
-export function buildBundlePreviewDeepLink(input: BuildBundlePreviewDeepLinkInput) {
-  const url = createPreviewUrl('/preview/bundle', input.origin)
-  url.searchParams.set('appId', input.appId)
-  url.searchParams.set('versionId', String(input.versionId))
-  if (input.payloadUrl)
-    url.searchParams.set('url', input.payloadUrl)
-  return formatPreviewUrl(url, input.origin)
-}
-
-export function parsePreviewDeepLink(rawUrl: string): PreviewLink | null {
-  return parseChannelPreviewDeepLink(rawUrl) ?? parseBundlePreviewDeepLink(rawUrl)
-}
-
-export function parseChannelPreviewDeepLink(rawUrl: string): ChannelPreviewLink | null {
-  const url = parseTrustedPreviewUrl(rawUrl)
-  if (!url || url.pathname !== '/preview/channel')
+export function parsePreviewDeepLink(value: string): PreviewDeepLink | null {
+  const url = parseUrl(value)
+  if (!url)
     return null
 
-  const appId = url.searchParams.get('appId')
-  const channelName = url.searchParams.get('channel')
-  const channelId = parsePositiveSafeInteger(url.searchParams.get('channelId'))
-  if (!appId || !channelName || channelId === null)
+  if (!isPreviewLinkOriginAllowed(url))
+    return null
+
+  const previewPath = getPreviewPath(url)
+  if (previewPath !== CHANNEL_PREVIEW_PATH && previewPath !== BUNDLE_PREVIEW_PATH)
+    return null
+
+  const payloadUrl = getHttpUrlParam(url, 'url', 'payloadUrl')
+  if (previewPath === BUNDLE_PREVIEW_PATH) {
+    const parsedVersionId = parseSafeIntegerParam(url, ['versionId', 'bundleId'], { min: 0 })
+    const appId = getTrimmedParam(url, 'appId', 'app')
+    if (!payloadUrl && (!appId || typeof parsedVersionId !== 'number'))
+      return null
+
+    return {
+      type: 'bundle',
+      appId,
+      payloadUrl,
+      versionId: parsedVersionId,
+    }
+  }
+
+  const appId = getTrimmedParam(url, 'appId', 'app')
+  const channelName = getTrimmedParam(url, 'channel', 'channelName')
+  const channelId = parseSafeIntegerParam(url, ['channelId'], { min: 1 })
+
+  if (!appId || !channelName)
     return null
 
   return {
@@ -73,8 +166,13 @@ export function parseChannelPreviewDeepLink(rawUrl: string): ChannelPreviewLink 
     appId,
     channelId,
     channelName,
-    payloadUrl: url.searchParams.get('url') ?? undefined,
+    payloadUrl,
   }
+}
+
+export function parseChannelPreviewDeepLink(value: string): ChannelPreviewLink | null {
+  const previewLink = parsePreviewDeepLink(value)
+  return previewLink?.type === 'channel' ? previewLink : null
 }
 
 export function buildChannelPreviewLatestOptions(previewLink: ChannelPreviewLink) {
@@ -83,68 +181,4 @@ export function buildChannelPreviewLatestOptions(previewLink: ChannelPreviewLink
     channel: previewLink.channelName,
     preview: true,
   }
-}
-
-function parseBundlePreviewDeepLink(rawUrl: string): BundlePreviewLink | null {
-  const url = parseTrustedPreviewUrl(rawUrl)
-  if (!url || url.pathname !== '/preview/bundle')
-    return null
-
-  const appId = url.searchParams.get('appId')
-  const versionId = parsePositiveSafeInteger(url.searchParams.get('versionId'))
-  if (!appId || versionId === null)
-    return null
-
-  return {
-    type: 'bundle',
-    appId,
-    versionId,
-    payloadUrl: url.searchParams.get('url') ?? undefined,
-  }
-}
-
-function createPreviewUrl(pathname: string, origin?: string) {
-  const base = origin ?? `${nativeScheme}://preview`
-  const url = new URL(base)
-  url.pathname = pathname
-  return url
-}
-
-function formatPreviewUrl(url: URL, origin?: string) {
-  if (origin)
-    return url.toString()
-  return `${nativeScheme}://${url.pathname.replace(/^\//, '')}?${url.searchParams.toString()}`
-}
-
-function parseTrustedPreviewUrl(rawUrl: string) {
-  const normalized = rawUrl.trim().replace(new RegExp(`^${nativeScheme}:/preview/`), `${nativeScheme}://preview/`)
-  let url: URL
-  try {
-    url = new URL(normalized)
-  }
-  catch {
-    return null
-  }
-
-  if (url.protocol === `${nativeScheme}:`) {
-    if (url.hostname !== 'preview')
-      return null
-    url.pathname = `/preview${url.pathname}`
-    return url
-  }
-
-  if (url.protocol === 'https:' && trustedHttpsHosts.has(url.hostname))
-    return url
-  if (url.protocol === 'http:' && trustedLocalHosts.has(url.hostname))
-    return url
-  return null
-}
-
-function parsePositiveSafeInteger(value: string | null) {
-  if (!value || !/^\d+$/.test(value))
-    return null
-  const parsed = Number(value)
-  if (!Number.isSafeInteger(parsed) || parsed < 0)
-    return null
-  return parsed
 }

@@ -1,195 +1,331 @@
-import { buildWebhookApiPath, webhookHeaders } from './webhooks'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { TableColumn } from '~/components/comp_def'
+import type { DialogV2Button, DialogV2Options } from '~/stores/dialogv2'
+import type { Database } from '~/types/supabase.types'
 
-export type ApiKeyScopeType = 'org' | 'app'
+export async function createDefaultApiKey(
+  supabase: SupabaseClient<Database>,
+  name: string,
+  options: {
+    orgId?: string | null
+    appId?: string | null
+    hashed?: boolean
+  } = {},
+) {
+  let orgId = options.orgId ?? null
+  let appUuid: string | null = null
 
-export interface ApiKeyBinding {
-  role_name?: string
-  roleName?: string
-  scope_type?: ApiKeyScopeType
-  scopeType?: ApiKeyScopeType
-  org_id?: string
-  orgId?: string
-  app_id?: string
-  appId?: string
-  reason?: string
-}
+  if (options.appId) {
+    const { data: app, error } = await supabase
+      .from('apps')
+      .select('id, owner_org')
+      .eq('app_id', options.appId)
+      .single()
 
-export interface ApiKeyRecord {
-  id: number
-  name: string
-  key?: string | null
-  key_hash?: string | null
-  keyHash?: string | null
-  rbac_id?: string | null
-  rbacId?: string | null
-  bindings?: ApiKeyBinding[]
-  global_permissions?: string[]
-  globalPermissions?: string[]
-  expires_at?: string | null
-  expiresAt?: string | null
-  created_at?: string | null
-  createdAt?: string | null
-  updated_at?: string | null
-  updatedAt?: string | null
-}
+    if (error)
+      throw error
 
-export interface ApiKeyOptions {
-  apiUrl?: string
-  apiKey: string
-  fetcher?: typeof fetch
-}
+    if (orgId && app?.owner_org && orgId !== app.owner_org) {
+      throw new Error('appId does not belong to orgId')
+    }
 
-export interface ApiKeyInput {
-  name: string
-  bindings: ApiKeyBinding[]
-  expiresAt?: string | null
-  globalPermissions?: string[]
-}
-
-export interface ApiKeyUpdateInput extends Partial<ApiKeyInput> {
-  regenerate?: boolean
-}
-
-export const API_KEY_ORG_ROLES = [
-  { label: 'Member', value: 'org_member' },
-  { label: 'Admin', value: 'org_admin' },
-  { label: 'Super admin', value: 'org_super_admin' },
-] as const
-
-export const API_KEY_APP_ROLES = [
-  { label: 'App reader', value: 'app_reader' },
-  { label: 'App uploader', value: 'app_uploader' },
-  { label: 'App admin', value: 'app_admin' },
-] as const
-
-function getFetcher(fetcher: typeof fetch | undefined) {
-  return fetcher ?? fetch
-}
-
-async function parseWorkerResponse<T>(response: Response, fallback: string): Promise<T> {
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const message = typeof data?.message === 'string' ? data.message : fallback
-    throw new Error(message)
+    appUuid = app?.id ?? null
+    orgId = orgId ?? app?.owner_org ?? null
   }
-  return data as T
-}
 
-export function buildApiKeyPath(path = '/apikey', apiUrl?: string) {
-  return buildWebhookApiPath(path, {}, apiUrl)
-}
-
-export function buildApiKeyBinding(input: { roleName: string, scopeType: ApiKeyScopeType, orgId?: string, appId?: string, reason?: string }): ApiKeyBinding {
-  return {
-    role_name: input.roleName,
-    roleName: input.roleName,
-    scope_type: input.scopeType,
-    scopeType: input.scopeType,
-    org_id: input.orgId,
-    orgId: input.orgId,
-    app_id: input.appId,
-    appId: input.appId,
-    reason: input.reason,
+  if (!orgId) {
+    throw new Error('Cannot create a default API key without an organization')
   }
-}
 
-export function normalizeApiKeyBinding(binding: ApiKeyBinding): ApiKeyBinding {
-  const roleName = binding.roleName ?? binding.role_name ?? ''
-  const scopeType = binding.scopeType ?? binding.scope_type ?? 'org'
-  const orgId = binding.orgId ?? binding.org_id
-  const appId = binding.appId ?? binding.app_id
-  return buildApiKeyBinding({ roleName, scopeType, orgId, appId, reason: binding.reason })
-}
+  const bindings: Array<{
+    role_name: string
+    scope_type: 'org' | 'app'
+    org_id: string
+    app_id?: string
+  }> = appUuid && !options.orgId
+    ? [
+        {
+          role_name: 'org_member',
+          scope_type: 'org',
+          org_id: orgId,
+        },
+        {
+          role_name: 'app_admin',
+          scope_type: 'app',
+          org_id: orgId,
+          app_id: appUuid,
+        },
+      ]
+    : [
+        {
+          role_name: 'org_admin',
+          scope_type: 'org',
+          org_id: orgId,
+        },
+      ]
 
-export function apiKeyBindingsSummary(bindings: ApiKeyBinding[] = []) {
-  if (bindings.length === 0)
-    return 'No bindings'
-  return bindings.map((binding) => {
-    const normalized = normalizeApiKeyBinding(binding)
-    const scope = normalized.scopeType === 'app' ? normalized.appId || 'app' : normalized.orgId || 'organization'
-    return `${normalized.roleName} on ${scope}`
-  }).join(', ')
-}
-
-export function apiKeyGlobalPermissions(record: Pick<ApiKeyRecord, 'global_permissions' | 'globalPermissions'>) {
-  return record.globalPermissions ?? record.global_permissions ?? []
-}
-
-export function apiKeyExpiresAt(record: Pick<ApiKeyRecord, 'expires_at' | 'expiresAt'>) {
-  return record.expiresAt ?? record.expires_at ?? null
-}
-
-export function apiKeyCreatedAt(record: Pick<ApiKeyRecord, 'created_at' | 'createdAt'>) {
-  return record.createdAt ?? record.created_at ?? null
-}
-
-export function isApiKeyExpired(expiresAt: string | null | undefined) {
-  return !!expiresAt && Date.parse(expiresAt) <= Date.now()
-}
-
-function serializeApiKeyInput(input: ApiKeyInput | ApiKeyUpdateInput) {
-  return {
-    name: input.name,
-    bindings: input.bindings?.map(normalizeApiKeyBinding),
-    expiresAt: input.expiresAt,
-    globalPermissions: input.globalPermissions,
-    regenerate: 'regenerate' in input ? input.regenerate : undefined,
-  }
-}
-
-export async function listApiKeys(options: ApiKeyOptions): Promise<ApiKeyRecord[]> {
-  const response = await getFetcher(options.fetcher)(buildApiKeyPath('/apikey', options.apiUrl), {
-    method: 'GET',
-    headers: webhookHeaders(options.apiKey),
+  return supabase.functions.invoke('apikey', {
+    method: 'POST',
+    body: {
+      name,
+      hashed: options.hashed === true,
+      bindings,
+    },
   })
-  const data = await parseWorkerResponse<unknown>(response, 'Failed to fetch API keys')
-  return Array.isArray(data) ? data as ApiKeyRecord[] : []
 }
 
-export async function createApiKey(options: ApiKeyOptions, input: ApiKeyInput): Promise<{ success: boolean, apiKey?: ApiKeyRecord, key?: string | null, error?: string }> {
-  try {
-    const response = await getFetcher(options.fetcher)(buildApiKeyPath('/apikey', options.apiUrl), {
-      method: 'POST',
-      headers: webhookHeaders(options.apiKey),
-      body: JSON.stringify(serializeApiKeyInput(input)),
+export async function createAiApiKey(
+  supabase: SupabaseClient<Database>,
+  name: string,
+  options: {
+    /** One or more organizations the key spans. */
+    orgIds: string[]
+    role: 'admin' | 'member'
+    /** Member role only: the apps to grant access on, each with its owning org and chosen app-level role. */
+    apps?: Array<{ uuid: string, orgId: string, role: string }>
+    /** Admin role only: also grant the `org.create` global permission (create new orgs). */
+    allowOrgCreate?: boolean
+  },
+) {
+  const { orgIds, role } = options
+
+  if (!orgIds || orgIds.length === 0) {
+    throw new Error('Cannot create an AI API key without an organization')
+  }
+
+  const bindings: Array<{
+    role_name: string
+    scope_type: 'org' | 'app'
+    org_id: string
+    app_id?: string
+  }> = []
+
+  if (role === 'admin') {
+    for (const orgId of orgIds)
+      bindings.push({ role_name: 'org_admin', scope_type: 'org', org_id: orgId })
+  }
+  else {
+    const orgIdSet = new Set(orgIds)
+    for (const orgId of orgIds)
+      bindings.push({ role_name: 'org_member', scope_type: 'org', org_id: orgId })
+    for (const app of options.apps ?? []) {
+      if (!orgIdSet.has(app.orgId))
+        throw new Error('Each app.orgId must be one of the selected orgIds')
+      bindings.push({ role_name: app.role, scope_type: 'app', org_id: app.orgId, app_id: app.uuid })
+    }
+  }
+
+  // `org.create` is only valid on a key that has an org-admin binding — i.e. the admin role.
+  const globalPermissions = role === 'admin' && options.allowOrgCreate ? ['org.create'] : undefined
+
+  return supabase.functions.invoke('apikey', {
+    method: 'POST',
+    body: {
+      name,
+      hashed: false,
+      bindings,
+      global_permissions: globalPermissions,
+    },
+  })
+}
+
+export async function findUsablePlainApiKey(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  orgId?: string | null,
+  appId?: string | null,
+): Promise<string | null> {
+  const isLiveKey = (expiresAt: string | null) => !expiresAt || new Date(expiresAt).getTime() > Date.now()
+  let appUuid: string | null = null
+
+  const { data: keys, error } = await supabase
+    .from('apikeys')
+    .select('key, expires_at, rbac_id, created_at')
+    .eq('user_id', userId)
+    .not('key', 'is', null)
+    .order('created_at', { ascending: false })
+
+  if (error || !keys?.length)
+    return null
+
+  const liveKeys = keys.filter(key => key.key && isLiveKey(key.expires_at))
+  if (!liveKeys.length)
+    return null
+
+  if (!orgId)
+    return liveKeys[0].key ?? null
+
+  if (appId) {
+    const { data: app, error: appError } = await supabase
+      .from('apps')
+      .select('id, owner_org')
+      .eq('app_id', appId)
+      .single()
+
+    if (appError || !app?.id || !app.owner_org)
+      return null
+
+    if (app.owner_org !== orgId)
+      return null
+
+    appUuid = app.id
+  }
+
+  const rbacIds = liveKeys.map(key => key.rbac_id).filter((rbacId): rbacId is string => !!rbacId)
+  if (!rbacIds.length)
+    return null
+
+  const { data: bindings, error: bindingsError } = await supabase
+    .from('role_bindings')
+    .select('principal_id, scope_type, app_id, roles(name)')
+    .eq('principal_type', 'apikey')
+    .eq('org_id', orgId)
+    .in('principal_id', rbacIds)
+
+  if (bindingsError || !bindings?.length)
+    return null
+
+  const orgAdminRoles = new Set(['org_super_admin', 'org_admin'])
+  const scopedKeyIds = new Set(((bindings ?? []) as any[])
+    .filter((binding) => {
+      const roleName = Array.isArray(binding.roles) ? binding.roles[0]?.name : binding.roles?.name
+      if (binding.scope_type === 'org' && orgAdminRoles.has(roleName))
+        return true
+      return !!appUuid && binding.scope_type === 'app' && binding.app_id === appUuid
     })
-    const apiKey = await parseWorkerResponse<ApiKeyRecord>(response, 'Failed to create API key')
-    return { success: true, apiKey, key: apiKey.key ?? null }
-  }
-  catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) }
+    .map(binding => binding.principal_id)
+    .filter((principalId): principalId is string => typeof principalId === 'string'))
+
+  if (!scopedKeyIds.size)
+    return null
+
+  return liveKeys.find(key => scopedKeyIds.has(key.rbac_id))?.key ?? null
+}
+
+interface ApiKeyListRow {
+  name?: string | null
+  created_at: string | null
+}
+
+interface DialogStoreLike {
+  lastButtonRole?: string
+  openDialog: (options: DialogV2Options) => void
+  onDialogDismiss: () => Promise<boolean>
+}
+
+type Translate = (key: string) => string
+
+function createDialogButton(
+  text: string,
+  role: DialogV2Button['role'],
+  handler?: DialogV2Button['handler'],
+): DialogV2Button {
+  return {
+    text,
+    role,
+    handler,
   }
 }
 
-export async function updateApiKey(options: ApiKeyOptions, id: number, input: ApiKeyUpdateInput): Promise<{ success: boolean, apiKey?: ApiKeyRecord, key?: string | null, error?: string }> {
-  try {
-    const response = await getFetcher(options.fetcher)(buildApiKeyPath(`/apikey/${id}`, options.apiUrl), {
-      method: 'PUT',
-      headers: webhookHeaders(options.apiKey),
-      body: JSON.stringify(serializeApiKeyInput(input)),
+export function isApiKeyExpired(expiresAt: string | null): boolean {
+  if (!expiresAt)
+    return false
+
+  return new Date(expiresAt) < new Date()
+}
+
+export function sortApiKeyRows<T extends ApiKeyListRow>(
+  rows: T[],
+  columns: TableColumn[],
+): T[] {
+  let result = [...rows]
+
+  columns.forEach((col) => {
+    if (!col.sortable || typeof col.sortable !== 'string')
+      return
+
+    result = [...result].sort((a, b) => {
+      let aValue: string | number = ''
+      let bValue: string | number = ''
+
+      switch (col.key) {
+        case 'name':
+          aValue = a.name?.toLowerCase() || ''
+          bValue = b.name?.toLowerCase() || ''
+          break
+        case 'created_at':
+          aValue = a.created_at ? new Date(a.created_at).getTime() : 0
+          bValue = b.created_at ? new Date(b.created_at).getTime() : 0
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue)
+        return col.sortable === 'asc' ? -1 : 1
+      if (aValue > bValue)
+        return col.sortable === 'asc' ? 1 : -1
+      return 0
     })
-    const apiKey = await parseWorkerResponse<ApiKeyRecord>(response, 'Failed to update API key')
-    return { success: true, apiKey, key: apiKey.key ?? null }
-  }
-  catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) }
-  }
+  })
+
+  return result
 }
 
-export async function regenerateApiKey(options: ApiKeyOptions, id: number): Promise<{ success: boolean, apiKey?: ApiKeyRecord, key?: string | null, error?: string }> {
-  return updateApiKey(options, id, { regenerate: true })
+export async function confirmApiKeyDeletion(
+  dialogStore: DialogStoreLike,
+  t: Translate,
+): Promise<boolean> {
+  dialogStore.openDialog({
+    title: t('alert-confirm-delete'),
+    description: `${t('alert-not-reverse-message')} ${t('alert-delete-message')}?`,
+    buttons: [
+      createDialogButton(t('button-cancel'), 'cancel'),
+      createDialogButton(t('button-delete'), 'danger'),
+    ],
+  })
+
+  const wasCanceled = await dialogStore.onDialogDismiss()
+  return !wasCanceled && dialogStore.lastButtonRole === 'danger'
 }
 
-export async function deleteApiKey(options: ApiKeyOptions, id: number): Promise<{ success: boolean, error?: string }> {
-  try {
-    const response = await getFetcher(options.fetcher)(buildApiKeyPath(`/apikey/${id}`, options.apiUrl), {
-      method: 'DELETE',
-      headers: webhookHeaders(options.apiKey),
-    })
-    await parseWorkerResponse(response, 'Failed to delete API key')
-    return { success: true }
-  }
-  catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) }
-  }
+export async function confirmApiKeyRegeneration(
+  dialogStore: DialogStoreLike,
+  t: Translate,
+): Promise<boolean> {
+  dialogStore.openDialog({
+    title: t('alert-confirm-regenerate'),
+    description: `${t('alert-not-reverse-message')}. ${t('alert-regenerate-key')}?`,
+    buttons: [
+      createDialogButton(t('button-cancel'), 'cancel'),
+      createDialogButton(t('button-regenerate'), 'primary'),
+    ],
+  })
+
+  const wasCanceled = await dialogStore.onDialogDismiss()
+  return !wasCanceled && dialogStore.lastButtonRole === 'primary'
+}
+
+export async function showApiKeySecretModal(
+  dialogStore: DialogStoreLike,
+  t: Translate,
+  plainKey: string,
+  onCopySuccess?: () => void,
+): Promise<void> {
+  dialogStore.openDialog({
+    title: t('secure-key-created'),
+    description: `${t('secure-key-warning')}\n\n${t('your-api-key')}: ${plainKey}`,
+    size: 'lg',
+    buttons: [
+      createDialogButton(t('copy-and-close'), 'primary', async () => {
+        try {
+          await navigator.clipboard.writeText(plainKey)
+          onCopySuccess?.()
+        }
+        catch {}
+      }),
+    ],
+  })
+
+  await dialogStore.onDialogDismiss()
 }

@@ -1,48 +1,89 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
-import { AlertTriangle, ArrowRight } from 'lucide-vue-next'
-import { countUnresolvedCompatibilityGroups } from '../../services/compatibilityEvents'
-import { createDashboardClient } from '../../services/registration'
+import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
+import IconAlertTriangle from '~icons/lucide/alert-triangle'
+import { groupCompatibilityEvents } from '~/services/compatibilityEvents'
+import { useSupabase } from '~/services/supabase'
 
 const props = defineProps<{
   appId: string
 }>()
 
-const client = createDashboardClient()
+const router = useRouter()
+const { t } = useI18n()
+const supabase = useSupabase()
+
 const unresolvedCount = ref(0)
 
-async function refreshUnresolvedCount() {
-  if (!client || !props.appId) {
+async function fetchUnresolvedCount() {
+  if (!props.appId) {
     unresolvedCount.value = 0
     return
   }
 
   try {
-    unresolvedCount.value = await countUnresolvedCompatibilityGroups(client, props.appId)
+    // Count occurrences, not raw rows: one channel change is many per-platform
+    // rows. Group the unresolved rows the same way the history page does so the
+    // banner count matches what the user sees there.
+    const { data, error } = await supabase
+      .from('compatibility_events')
+      .select('id, platform, channel_id, current_version_id, previous_version_id, source, change_occurred_at, created_at, resolved_at')
+      .eq('app_id', props.appId)
+      .is('resolved_at', null)
+
+    if (error) {
+      console.error('[CompatibilityBanner] Error fetching unresolved count:', error)
+      unresolvedCount.value = 0
+      return
+    }
+
+    unresolvedCount.value = groupCompatibilityEvents(data ?? []).length
   }
-  catch {
+  catch (error) {
+    console.error('[CompatibilityBanner] Error fetching unresolved count:', error)
     unresolvedCount.value = 0
   }
 }
 
-onMounted(refreshUnresolvedCount)
-watch(() => props.appId, refreshUnresolvedCount)
+function viewCompatibility() {
+  router.push(`/app/${encodeURIComponent(props.appId)}/compatibility`)
+}
+
+watch(() => props.appId, () => {
+  fetchUnresolvedCount()
+}, { immediate: true })
 </script>
 
 <template>
-  <section v-if="unresolvedCount > 0" class="console-table-card compatibility-banner" data-test="compatibility-banner">
-    <div>
-      <AlertTriangle :size="18" />
-      <div>
-        <p class="eyebrow">Compatibility</p>
-        <h2>{{ unresolvedCount }} unresolved native compatibility {{ unresolvedCount === 1 ? 'event' : 'events' }}</h2>
-        <p>Review bundle changes that may require a matching native release before more devices receive them.</p>
+  <div
+    v-if="unresolvedCount > 0"
+    data-test="compatibility-banner"
+    class="mb-4 overflow-hidden border rounded-lg border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800"
+  >
+    <div class="flex items-center justify-between p-4">
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50">
+          <IconAlertTriangle class="w-5 h-5 text-amber-600 dark:text-amber-400" />
+        </div>
+
+        <div>
+          <p class="font-semibold text-amber-900 dark:text-amber-100">
+            {{ t('compatibility-events') }}
+          </p>
+          <p class="text-sm text-amber-700 dark:text-amber-300">
+            {{ t('compatibility-unresolved-banner', { count: unresolvedCount }) }}
+          </p>
+        </div>
       </div>
+
+      <button
+        data-test="compatibility-banner-view"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-md bg-amber-600 hover:bg-amber-700 shrink-0"
+        @click="viewCompatibility"
+      >
+        {{ t('compatibility-view-details') }}
+      </button>
     </div>
-    <RouterLink class="primary" :to="`/app/${encodeURIComponent(appId)}/compatibility`">
-      View details
-      <ArrowRight :size="16" />
-    </RouterLink>
-  </section>
+  </div>
 </template>

@@ -8,7 +8,7 @@ describe('[Capgo parity] get_identity_apikey_only RPC permissions', () => {
   it('keeps API-key identity lookup in the single migration and resolves only from capgkey', () => {
     expect(migrationSql).toContain('CREATE OR REPLACE FUNCTION public.get_identity_apikey_only')
     expect(migrationSql).toContain("public.request_header('capgkey')")
-    expect(migrationSql).toContain("encode(digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')")
+    expect(migrationSql).toContain("encode(extensions.digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')")
     expect(migrationSql).toContain('SELECT apikeys.rbac_id')
     expect(migrationSql).toContain('AND (apikeys.expires_at IS NULL OR apikeys.expires_at > now())')
   })

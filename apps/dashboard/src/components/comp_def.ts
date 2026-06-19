@@ -1,0 +1,50 @@
+import type { FunctionalComponent, Ref, ShallowRef } from 'vue'
+import type { ComposerTranslation } from 'vue-i18n'
+
+export interface Stat {
+  label: string | ComposerTranslation
+  value: string | Ref<string> | number | Ref<number> | undefined
+  link?: string
+  hoverLabel?: string
+  informationIcon?: FunctionalComponent | ShallowRef<FunctionalComponent<any>>
+}
+export interface TableSort {
+  [key: string]: 'asc' | 'desc' | null
+}
+
+/**
+ * Defines a single action button configuration.
+ */
+export interface TableAction {
+  icon: FunctionalComponent | ShallowRef<FunctionalComponent<any>>
+  onClick: (item: any) => void
+  visible?: (item: any) => boolean
+  disabled?: (item: any) => boolean
+  title?: string | ((item: any) => string)
+  testId?: string | ((item: any) => string)
+}
+
+export interface TableColumn {
+  label: string
+  key: string
+  mobile?: boolean
+  sortable?: boolean | 'asc' | 'desc'
+  head?: boolean
+  icon?: FunctionalComponent | ShallowRef<FunctionalComponent<any>>
+  onClick?: (item: any) => void
+  actions?: TableAction[] // New property for multiple actions
+  class?: string
+  allowHtml?: boolean
+  sanitizeHtml?: boolean
+  displayFunction?: (item: any) => string | number
+  // Preferred way to render complex cell content without v-html
+  renderFunction?: (item: any) => any
+}
+
+export interface Tab {
+  label: string
+  icon?: FunctionalComponent | ShallowRef<FunctionalComponent<any>>
+  key: string
+  onClick?: (elem: any | undefined) => void
+  redirect?: boolean
+}

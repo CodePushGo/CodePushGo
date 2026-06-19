@@ -1,44 +1,45 @@
-import { i18n } from '../modules/i18n'
+import { changeLocale } from '@formkit/vue'
+import countryCodeToFlagEmoji from 'country-code-to-flag-emoji'
+import { toast } from 'vue-sonner'
+import { getSelectedLanguage, i18n, loadLanguageAsync, normalizeLanguage, RemoteLanguageError } from '../modules/i18n'
 
-export interface ChangeLanguageOptions {
-  persist?: boolean
-  changeFormLocale?: (locale: string) => void
-  notifyInfo?: (message: string) => void
-  notifyError?: (message: string) => void
+const countryCodes: Record<string, string> = {
+  'en': 'US',
+  'hi': 'IN',
+  'ja': 'JP',
+  'ko': 'KR',
+  'pt-br': 'BR',
+  'vi': 'VN',
+  'zh-cn': 'CN',
 }
 
-function storeLanguage(locale: string) {
+const formkitLocales: Record<string, string> = {
+  'pt-br': 'pt',
+  'zh-cn': 'zh',
+}
+
+export function getEmoji(locale: string) {
+  return countryCodeToFlagEmoji((countryCodes[locale] ?? locale).toUpperCase())
+}
+
+export async function changeLanguage(lang: string) {
+  const currentLanguage = getSelectedLanguage()
+  const nextLanguage = normalizeLanguage(lang)
+
+  if (currentLanguage === nextLanguage)
+    return currentLanguage
+
   try {
-    globalThis.localStorage?.setItem('lang', locale)
+    await loadLanguageAsync(nextLanguage)
+    changeLocale(formkitLocales[nextLanguage] ?? nextLanguage)
+    return nextLanguage
   }
-  catch {
-    // Storage can be unavailable in private contexts; locale switching should still work.
+  catch (error) {
+    if (error instanceof RemoteLanguageError && error.reason === 'pending')
+      toast.info(i18n.global.t('translation-not-ready'))
+    else
+      toast.error(i18n.global.t('translation-unavailable'))
+
+    return currentLanguage
   }
-}
-
-export async function changeLanguage(locale: string, options: ChangeLanguageOptions = {}) {
-  const currentLocale = i18n.global.locale.value
-  const response = await fetch('/i18n/messages', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ targetLanguage: locale }),
-  })
-
-  if (response.status === 202) {
-    options.notifyInfo?.('Translation is being prepared. Try again in a bit.')
-    return currentLocale
-  }
-
-  if (!response.ok) {
-    options.notifyError?.('This language is not available right now.')
-    return currentLocale
-  }
-
-  const body = await response.json() as { messages?: Record<string, string> }
-  i18n.global.setLocaleMessage(locale, body.messages ?? {})
-  i18n.global.locale.value = locale
-  options.changeFormLocale?.(locale)
-  if (options.persist !== false)
-    storeLanguage(locale)
-  return locale
 }

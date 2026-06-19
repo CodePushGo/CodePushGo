@@ -1,0 +1,571 @@
+-- Test RLS Policies
+-- This file tests all Row Level Security policies in the database
+BEGIN;
+
+-- Plan the number of tests
+SELECT plan(46);
+
+-- Test app_versions policies
+SELECT
+    policies_are(
+        'public',
+        'app_versions',
+        ARRAY[
+            'Allow all for auth (super_admin+)',
+            'Allow for auth, api keys (read+)',
+            'Allow insert for api keys (write,all,upload) (upload+)',
+            'Allow update for auth and api keys',
+            'Prevent non 2FA access'
+        ],
+        'app_versions should have correct policies'
+    );
+
+-- Test apps policies
+SELECT
+    policies_are(
+        'public',
+        'apps',
+        ARRAY[
+            'Allow all for auth (super_admin+)',
+            'Allow for auth, api keys (read+)',
+            'Allow insert for apikey (write,all) (admin+)',
+            'Allow update for auth, api keys (write, all) (admin+)',
+            'Prevent non 2FA access'
+        ],
+        'apps should have correct policies'
+    );
+
+-- Test global_stats policies
+SELECT
+    policies_are(
+        'public',
+        'global_stats',
+        ARRAY[]::text [],
+        'global_stats should have correct policies'
+    );
+
+-- Test stats policies
+SELECT
+    policies_are(
+        'public',
+        'stats',
+        ARRAY[
+            'Allow read for auth (read+)'
+        ],
+        'stats should have correct policies'
+    );
+
+-- Test channel_devices policies
+SELECT
+    policies_are(
+        'public',
+        'channel_devices',
+        ARRAY[
+            'Allow delete for auth, api keys (write+)',
+            'Allow insert for auth (write+)',
+            'Allow read for auth, api keys (read+)',
+            'Allow update for auth, api keys (write+)',
+            'Prevent non 2FA access'
+        ],
+        'channel_devices should have correct policies'
+    );
+
+-- Test channel_permission_overrides policies
+SELECT
+    policies_are(
+        'public',
+        'channel_permission_overrides',
+        ARRAY[
+            'channel_permission_overrides_admin_delete',
+            'channel_permission_overrides_admin_insert',
+            'channel_permission_overrides_admin_select',
+            'channel_permission_overrides_admin_update'
+        ],
+        'channel_permission_overrides should have split write policies and one select policy'
+    );
+
+SELECT
+    is(
+        (
+            SELECT count(*)
+            FROM pg_policies
+            WHERE
+                schemaname = 'public'
+                AND tablename = 'channel_permission_overrides'
+                AND permissive = 'PERMISSIVE'
+                AND 'authenticated' = any(roles)
+                AND cmd IN ('SELECT', 'ALL')
+        ),
+        1::bigint,
+        'channel_permission_overrides should expose only one permissive SELECT path for authenticated'
+    );
+
+SELECT
+    is(
+        (
+            SELECT count(*)
+            FROM (
+                SELECT
+                    schemaname,
+                    tablename,
+                    cmd
+                FROM pg_policies
+                WHERE
+                    schemaname = 'public'
+                    AND permissive = 'PERMISSIVE'
+                GROUP BY
+                    schemaname,
+                    tablename,
+                    cmd
+                HAVING count(*) > 1
+            ) duplicate_public_policies
+        ),
+        0::bigint,
+        'public RLS should not have duplicate permissive policies for the same table operation'
+    );
+
+-- Test orgs policies
+SELECT
+    policies_are(
+        'public',
+        'orgs',
+        ARRAY[
+            'Allow insert org for user',
+            'Allow org delete for super_admin',
+            'Allow select for auth, api keys (read+)',
+            'Allow update for auth (admin+)',
+            'Prevent non 2FA access'
+        ],
+        'orgs should have correct policies'
+    );
+
+-- Test apikey_global_permissions policies
+SELECT
+    policies_are(
+        'public',
+        'apikey_global_permissions',
+        ARRAY[
+            'Deny delete on apikey_global_permissions',
+            'Deny insert on apikey_global_permissions',
+            'Deny select on apikey_global_permissions',
+            'Deny update on apikey_global_permissions'
+        ],
+        'apikey_global_permissions should have correct restrictive policies'
+    );
+
+-- Test devices policies
+SELECT
+    policies_are(
+        'public',
+        'devices',
+        ARRAY[
+            'Allow org member to insert devices',
+            'Allow org member to select devices',
+            'Allow org member to update devices'
+        ],
+        'devices should have correct policies'
+    );
+
+-- Test app_versions_meta policies
+SELECT
+    policies_are(
+        'public',
+        'app_versions_meta',
+        ARRAY['Allow read for auth (read+)'],
+        'app_versions_meta should have correct policies'
+    );
+
+-- Test daily_bandwidth policies
+SELECT
+    policies_are(
+        'public',
+        'daily_bandwidth',
+        ARRAY['Allow read for auth (read+)'],
+        'daily_bandwidth should have correct policies'
+    );
+
+-- Test daily_mau policies
+SELECT
+    policies_are(
+        'public',
+        'daily_mau',
+        ARRAY['Allow read for auth (read+)'],
+        'daily_mau should have correct policies'
+    );
+
+-- Test daily_storage policies
+SELECT
+    policies_are(
+        'public',
+        'daily_storage',
+        ARRAY['Allow read for auth (read+)'],
+        'daily_storage should have correct policies'
+    );
+
+-- Test daily_version policies
+SELECT
+    policies_are(
+        'public',
+        'daily_version',
+        ARRAY['Allow read for auth (read+)'],
+        'daily_version should have correct policies'
+    );
+
+-- Test users policies
+SELECT
+    policies_are(
+        'public',
+        'users',
+        ARRAY[
+            'Allow owner to insert own users',
+            'Allow owner to select own user',
+            'Allow owner to update own users',
+            'Disallow owner to delete own users'
+        ],
+        'users should have correct policies'
+    );
+
+-- Test org_users policies
+SELECT
+    policies_are(
+        'public',
+        'org_users',
+        ARRAY[
+            'Allow org admin to update',
+            'Allow to self delete',
+            'Allow org admin to insert',
+            'Prevent non 2FA access',
+            'Allow member and owner to select'
+        ],
+        'org_users should have correct policies'
+    );
+
+-- Test channels policies
+SELECT
+    policies_are(
+        'public',
+        'channels',
+        ARRAY[
+            'Allow delete for auth (admin+) (all apikey)',
+            'Allow insert for auth, api keys (write, all) (admin+)',
+            'Allow select for auth, api keys (read+)',
+            'Allow update for auth, api keys (write, all) (write+)',
+            'Prevent non 2FA access'
+        ],
+        'channels should have correct policies'
+    );
+
+-- Test stripe_info policies
+SELECT
+    policies_are(
+        'public',
+        'stripe_info',
+        ARRAY['Allow org member to select stripe_info'],
+        'stripe_info should have correct policies'
+    );
+
+-- Test daily_revenue_metrics policies
+SELECT
+    policies_are(
+        'public',
+        'daily_revenue_metrics',
+        ARRAY['Deny all access'],
+        'daily_revenue_metrics should deny all user-context access'
+    );
+
+-- Test processed_stripe_events policies
+SELECT
+    policies_are(
+        'public',
+        'processed_stripe_events',
+        ARRAY['Deny all access'],
+        'processed_stripe_events should deny all user-context access'
+    );
+
+SELECT
+    ok(
+        (
+            SELECT c.relrowsecurity
+            FROM pg_class AS c
+            JOIN pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'daily_revenue_metrics'
+        ),
+        'daily_revenue_metrics should have RLS enabled'
+    );
+
+SELECT
+    ok(
+        (
+            SELECT c.relrowsecurity
+            FROM pg_class AS c
+            JOIN pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'processed_stripe_events'
+        ),
+        'processed_stripe_events should have RLS enabled'
+    );
+
+-- Test manifest policies
+SELECT
+    policies_are(
+        'public',
+        'manifest',
+        ARRAY[
+            'Allow select for auth, api keys (read+)',
+            'Prevent users from deleting manifest entries',
+            'Prevent users from inserting manifest entries',
+            'Prevent users from updating manifest entries'
+        ],
+        'manifest should have correct policies'
+    );
+
+SELECT
+    is(
+        (
+            SELECT count(*)
+            FROM pg_policies
+            WHERE
+                schemaname = 'public'
+                AND tablename = 'manifest'
+                AND policyname = 'Prevent users from updating manifest entries'
+                AND permissive = 'RESTRICTIVE'
+                AND cmd = 'UPDATE'
+                AND roles @> ARRAY['anon', 'authenticated']::name []
+                AND array_length(roles, 1) = 2
+                AND qual = 'false'
+                AND with_check = 'false'
+        ),
+        1::bigint,
+        'manifest update deny policy should match restrictive role shape'
+    );
+
+-- Test deploy_history policies
+SELECT
+    policies_are(
+        'public',
+        'deploy_history',
+        ARRAY[
+            'Allow users to view deploy history for their org',
+            'Allow users with write permissions to insert deploy history',
+            'Deny delete on deploy history',
+            'Prevent update on deploy history'
+        ],
+        'deploy_history should have correct policies'
+    );
+
+-- Test bandwidth_usage policies
+SELECT
+    policies_are(
+        'public',
+        'bandwidth_usage',
+        ARRAY['Disable for all'],
+        'bandwidth_usage should have correct policies'
+    );
+
+-- Test device_usage policies
+SELECT
+    policies_are(
+        'public',
+        'device_usage',
+        ARRAY['Disable for all'],
+        'device_usage should have correct policies'
+    );
+
+-- Test notifications policies
+SELECT
+    policies_are(
+        'public',
+        'notifications',
+        ARRAY['Disable for all'],
+        'notifications should have correct policies'
+    );
+
+-- Test storage_usage policies
+SELECT
+    policies_are(
+        'public',
+        'storage_usage',
+        ARRAY['Disable for all'],
+        'storage_usage should have correct policies'
+    );
+
+-- Test version_meta policies
+SELECT
+    policies_are(
+        'public',
+        'version_meta',
+        ARRAY['Disable for all'],
+        'version_meta should have correct policies'
+    );
+
+-- Test version_usage policies
+SELECT
+    policies_are(
+        'public',
+        'version_usage',
+        ARRAY['Disable for all'],
+        'version_usage should have correct policies'
+    );
+
+-- Test apikeys policies
+SELECT
+    policies_are(
+        'public',
+        'apikeys',
+        ARRAY[
+            'Allow owner to delete own apikeys',
+            'Allow owner to select own apikeys',
+            'Allow owner to update own apikeys',
+            'Deny client insert on apikeys',
+            'Prevent non 2FA access'
+        ],
+        'apikeys should have correct policies'
+    );
+
+-- usage_credit_ledger should respect caller RLS and allow authenticated reads
+SELECT
+    ok(
+        has_table_privilege(
+            'authenticated',
+            'public.usage_credit_ledger',
+            'SELECT'
+        ),
+        'usage_credit_ledger grants SELECT to authenticated'
+    );
+
+SELECT
+    ok(
+        EXISTS (
+            SELECT 1
+            FROM
+                pg_class AS c
+            WHERE
+                c.relname = 'usage_credit_ledger'
+                AND c.relkind = 'v'
+                AND EXISTS (
+                    SELECT 1
+                    FROM
+                        unnest(c.reloptions) AS opt
+                    WHERE
+                        opt LIKE 'security_invoker%'
+                )
+        ),
+        'usage_credit_ledger runs with security_invoker to enforce base table RLS'
+    );
+
+-- Test plans policies
+SELECT
+    policies_are(
+        'public',
+        'plans',
+        ARRAY['Enable select for anyone'],
+        'plans should have correct policies'
+    );
+
+-- Test deleted_account policies
+SELECT
+    policies_are(
+        'public',
+        'deleted_account',
+        ARRAY['Enable update for users based on email'],
+        'deleted_account should have correct policies'
+    );
+
+-- Test deleted_apps policies
+SELECT
+    policies_are(
+        'public',
+        'deleted_apps',
+        ARRAY['deny_all_access'],
+        'deleted_apps should have correct policies'
+    );
+
+-- Test storage.objects policies
+SELECT
+    policies_are(
+        'storage',
+        'objects',
+        ARRAY[
+            'Allow user or apikey to delete they own folder in apps',
+            'Allow user or apikey to delete they own folder in images',
+            'Allow user or apikey to insert they own folder in apps',
+            'Allow user or apikey to insert they own folder in images',
+            'Allow user or apikey to read they own folder in apps',
+            'Allow user or apikey to read they own folder in images',
+            'Allow user or apikey to update they own folder in apps',
+            'Allow user or apikey to update they own folder in images'
+        ],
+        'storage.objects should have correct policies'
+    );
+
+-- Test storage.buckets policies
+SELECT
+    policies_are(
+        'storage',
+        'buckets',
+        ARRAY['Disable act bucket for users'],
+        'storage.buckets should have correct policies'
+    );
+
+-- Additional tests for policy roles and commands
+-- Test that restrictive policies are marked as restrictive
+SELECT
+    is(
+        (
+            SELECT count(*)
+            FROM
+                pg_policies
+            WHERE
+                schemaname = 'public'
+                AND tablename = 'apikeys'
+                AND policyname = 'Prevent non 2FA access'
+                AND permissive = 'RESTRICTIVE'
+        ),
+        1::bigint,
+        'Prevent non 2FA access policy on apikeys should be restrictive'
+    );
+
+-- Test policy commands for specific policies
+SELECT
+    policy_cmd_is(
+        'public',
+        'app_versions',
+        'Allow all for auth (super_admin+)',
+        'DELETE',
+        'Delete policy on app_versions should be for DELETE command'
+    );
+
+SELECT
+    policy_cmd_is(
+        'public',
+        'apps',
+        'Allow for auth, api keys (read+)',
+        'SELECT',
+        'Read policy on apps should be for SELECT command'
+    );
+
+SELECT
+    policy_cmd_is(
+        'public',
+        'channel_devices',
+        'Allow insert for auth (write+)',
+        'INSERT',
+        'Insert policy on channel_devices should be for INSERT command'
+    );
+
+SELECT
+    policy_cmd_is(
+        'public',
+        'orgs',
+        'Allow update for auth (admin+)',
+        'UPDATE',
+        'Update policy on orgs should be for UPDATE command'
+    );
+
+-- Complete the tests
+SELECT *
+FROM
+    finish();
+
+ROLLBACK;

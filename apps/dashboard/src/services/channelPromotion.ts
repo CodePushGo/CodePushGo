@@ -1,31 +1,34 @@
+import type { Permission } from '~/services/permissions'
+import { checkPermissions } from '~/services/permissions'
+
 export interface ChannelPromotionTarget {
   id: number
   name: string
 }
 
-export interface ChannelPromotionScope {
-  appId: string
-  channelId: number
-}
-
-export type ChannelPermissionChecker = (permission: 'write' | 'promote', scope: ChannelPromotionScope) => boolean | Promise<boolean>
+export type ChannelPromotionPermissionChecker = (
+  permission: Permission,
+  scope: { appId: string, channelId: number },
+) => Promise<boolean>
 
 export async function findChannelsWithoutPromotionPermission(
   appId: string,
   channels: ChannelPromotionTarget[],
-  can: ChannelPermissionChecker,
+  permissionChecker: ChannelPromotionPermissionChecker = checkPermissions,
 ) {
-  const denied: ChannelPromotionTarget[] = []
-  for (const channel of channels) {
+  const channelPermissions = await Promise.all(channels.map(async (channel) => {
     try {
-      if (!await can('promote', { appId, channelId: channel.id }))
-        denied.push(channel)
+      const allowed = await permissionChecker('channel.promote_bundle', { appId, channelId: channel.id })
+      return { channel, allowed }
     }
     catch {
-      denied.push(channel)
+      return { channel, allowed: false }
     }
-  }
-  return denied
+  }))
+
+  return channelPermissions
+    .filter(({ allowed }) => !allowed)
+    .map(({ channel }) => channel)
 }
 
 export function formatChannelPromotionTargets(channels: ChannelPromotionTarget[]) {

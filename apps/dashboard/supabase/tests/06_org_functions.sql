@@ -1,0 +1,100 @@
+BEGIN;
+
+
+SELECT plan(10);
+
+-- Test is_member_of_org
+SELECT
+    is(
+        is_member_of_org(
+            tests.get_supabase_uid('test_admin'),
+            '22dbad8a-b885-4309-9b3b-a09f8460fb6d'
+        ),
+        true,
+        'is_member_of_org test - user is member'
+    );
+
+SELECT
+    is(
+        is_member_of_org(
+            tests.get_supabase_uid('test_user'),
+            '22dbad8a-b885-4309-9b3b-a09f8460fb6d'
+        ),
+        false,
+        'is_member_of_org test - user is not member'
+    );
+
+SELECT tests.authenticate_as('test_admin');
+
+-- Test is_paying_org
+SELECT
+    is(
+        is_paying_org('22dbad8a-b885-4309-9b3b-a09f8460fb6d'),
+        true,
+        'is_paying_org test - org is paying'
+    );
+
+SELECT
+    is(
+        is_paying_org('22dbad8a-b885-4309-9b3b-a09f8460fb6e'),
+        false,
+        'is_paying_org test - org does not exist'
+    );
+
+-- Test is_trial_org
+SELECT
+    is(
+        public.is_trial_org('22dbad8a-b885-4309-9b3b-a09f8460fb6d'),
+        (
+            SELECT COALESCE(
+                GREATEST((trial_at::date - CURRENT_DATE), 0),
+                0
+            )::integer
+            FROM public.stripe_info
+            WHERE customer_id = 'cus_Pa0k8TO6HVln6A'
+        ),
+        'is_trial_org test - org is in trial'
+    );
+
+SELECT
+    is(
+        COALESCE(public.is_trial_org('22dbad8a-b885-4309-9b3b-a09f8460fb6e'), 0),
+        0,
+        'is_trial_org test - org does not exist'
+    );
+
+-- Test is_onboarded_org
+SELECT
+    is(
+        is_onboarded_org('046a36ac-e03c-4590-9257-bd6c9dba9ee8'),
+        true,
+        'is_onboarded_org test - org is onboarded'
+    );
+
+SELECT
+    is(
+        is_onboarded_org('22dbad8a-b885-4309-9b3b-a09f8460fb6e'),
+        false,
+        'is_onboarded_org test - org does not exist'
+    );
+
+-- Test is_canceled_org
+SELECT
+    is(
+        is_canceled_org('22dbad8a-b885-4309-9b3b-a09f8460fb6d'),
+        false,
+        'is_canceled_org test - org is not canceled'
+    );
+
+SELECT
+    is(
+        is_canceled_org('22dbad8a-b885-4309-9b3b-a09f8460fb6e'),
+        false,
+        'is_canceled_org test - org does not exist'
+    );
+
+SELECT *
+FROM
+    finish();
+
+ROLLBACK;

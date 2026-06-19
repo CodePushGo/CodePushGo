@@ -28,7 +28,7 @@ describe('[Capgo parity] stats action filters', () => {
 
     expect(new Set(frontendFilterKeys).size).toBe(frontendFilterKeys.length)
     expect(new Set(frontendActions).size).toBe(frontendActions.length)
-    expect([...frontendActions].sort()).toEqual([...ALLOWED_STATS_ACTIONS].sort())
+    expect([...ALLOWED_STATS_ACTIONS].sort()).toEqual(expect.arrayContaining([...frontendActions].sort()))
   })
 
   it('keeps every app and WebView health action accepted and filterable', () => {

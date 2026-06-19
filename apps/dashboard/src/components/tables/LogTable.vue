@@ -1,75 +1,468 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Search } from 'lucide-vue-next'
-import type { AppStatRow } from '../../stores/console'
-
-defineOptions({ name: 'LogTable' })
+import type { Ref } from 'vue'
+import type { TableColumn } from '../comp_def'
+import dayjs from 'dayjs'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
+import { formatDate } from '~/services/date'
+import { actionToFilter, createActionFilterState, filterToAction } from '~/services/statsActions'
+import { defaultApiHost, useSupabase } from '~/services/supabase'
 
 const props = defineProps<{
-  appStats: AppStatRow[]
+  deviceId?: string
+  appId?: string
+  actions?: string[]
 }>()
 
-const search = ref('')
-const action = ref('all')
+interface LogData {
+  app_id: string
+  device_id: string
+  action: string
+  version_name: string
+  version?: number
+  metadata?: Record<string, string> | string | null
+  created_at: string
+}
+type Element = LogData
 
-const actions = computed(() => [...new Set(props.appStats.map(stat => stat.action).filter((value): value is string => Boolean(value)))])
-const filteredStats = computed(() => {
-  const query = search.value.trim().toLowerCase()
-  return props.appStats.filter((stat) => {
-    const matchesSearch = !query || [stat.action, stat.version_name, stat.platform, stat.device_id].some(value => value?.toLowerCase().includes(query))
-    const matchesAction = action.value === 'all' || stat.action === action.value
-    return matchesSearch && matchesAction
+function getActiveOrder(columns: TableColumn[]) {
+  return columns
+    .filter(col => typeof col.sortable === 'string')
+    .map(col => ({ key: col.key, sortable: col.sortable }))
+}
+
+interface ParsedVersionName {
+  version: string
+  filename: string | null
+  isFileSpecific: boolean
+}
+
+function parseVersionName(versionName: string): ParsedVersionName {
+  const colonIndex = versionName.indexOf(':')
+  if (colonIndex > 0) {
+    return {
+      version: versionName.substring(0, colonIndex),
+      filename: versionName.substring(colonIndex + 1),
+      isFileSpecific: true,
+    }
+  }
+  return {
+    version: versionName,
+    filename: null,
+    isFileSpecific: false,
+  }
+}
+const columns: Ref<TableColumn[]> = ref<TableColumn[]>([])
+const router = useRouter()
+const route = useRoute()
+const { t } = useI18n()
+const supabase = useSupabase()
+const search = ref('')
+const elements = ref<Element[]>([])
+const isLoading = ref(false)
+const isExporting = ref(false)
+const currentPage = ref(1)
+
+// Initialize date range from query parameters if provided, otherwise default to last hour
+function initializeDateRange(): [Date, Date] {
+  const startParam = route.query.start
+  const endParam = route.query.end
+
+  if (startParam && endParam && typeof startParam === 'string' && typeof endParam === 'string') {
+    try {
+      const startDate = new Date(startParam)
+      const endDate = new Date(endParam)
+
+      // Validate dates
+      if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+        return [startDate, endDate]
+      }
+    }
+    catch (error) {
+      console.warn('Invalid date parameters in URL:', error)
+    }
+  }
+
+  return [dayjs().subtract(1, 'hour').toDate(), new Date()]
+}
+
+const range = ref<[Date, Date]>(initializeDateRange())
+const DOC_LOGS = 'https://codepushgo.com/docs/plugin/debugging/#sent-from-the-backend'
+
+function normalizeMetadata(metadata: LogData['metadata']): Record<string, string> | null {
+  if (!metadata)
+    return null
+  if (typeof metadata === 'string') {
+    try {
+      const parsed = JSON.parse(metadata)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+        return parsed as Record<string, string>
+    }
+    catch {
+      return null
+    }
+    return null
+  }
+  return metadata
+}
+
+function formatMetadata(elem: Element): string {
+  const metadata = normalizeMetadata(elem.metadata)
+  if (!metadata)
+    return '-'
+
+  const entries = Object.entries(metadata)
+  if (!entries.length)
+    return '-'
+
+  const preview = entries.slice(0, 3).map(([key, value]) => `${key}: ${value}`).join(', ')
+  return entries.length > 3 ? `${preview}, +${entries.length - 3}` : preview
+}
+
+async function copyMetadata(elem: Element) {
+  const metadata = normalizeMetadata(elem.metadata)
+  if (!metadata)
+    return
+
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(metadata, null, 2))
+    toast.success(t('copied-to-clipboard'))
+  }
+  catch (error) {
+    console.error(error)
+    toast.error(t('copy-fail'))
+  }
+}
+
+const actionFilters = ref<Record<string, boolean>>(createActionFilterState())
+
+function formatAction(elem: Element): string {
+  const filterKey = actionToFilter[elem.action]
+  return filterKey ? t(filterKey) : elem.action
+}
+
+// Initialize action filters from URL query parameter
+function initializeActionFilters(): void {
+  const actionParams = [route.query.action]
+    .flat()
+    .filter((action): action is string => typeof action === 'string')
+
+  actionParams.forEach((action) => {
+    const filterKey = actionToFilter[action]
+    if (filterKey && actionFilters.value[filterKey] !== undefined) {
+      actionFilters.value[filterKey] = true
+    }
   })
+}
+
+// Compute active actions based on filters
+const activeActions = computed(() => {
+  const actions: string[] = []
+  for (const [filterKey, enabled] of Object.entries(actionFilters.value)) {
+    if (enabled && filterToAction[filterKey]) {
+      actions.push(filterToAction[filterKey])
+    }
+  }
+  // If props.actions is provided, use those instead (for backward compatibility)
+  if (props.actions?.length) {
+    return props.actions
+  }
+  // If no filters are selected, return undefined to get all actions
+  return actions.length > 0 ? actions : undefined
 })
 
-function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleString() : '-'
+const paginatedRange = computed(() => {
+  const rangeStart = range.value ? range.value[0].getTime() : undefined
+  const rangeEnd = range.value ? range.value[1].getTime() : undefined
+
+  if (rangeStart && rangeEnd) {
+    const timeDifference = rangeEnd - rangeStart
+    const pageTimeOffset = timeDifference * (currentPage.value - 1)
+
+    return {
+      rangeStart: rangeStart + pageTimeOffset,
+      rangeEnd: rangeEnd + pageTimeOffset,
+    }
+  }
+
+  return {
+    rangeStart,
+    rangeEnd,
+  }
+})
+
+async function getData() {
+  isLoading.value = true
+  try {
+    const { data: currentSession } = await supabase.auth.getSession()!
+    if (!currentSession.session)
+      return
+    const currentJwt = currentSession.session.access_token
+    // console.log('paginatedRange.value', paginatedRange.value, currentPage.value)
+
+    try {
+      const response = await fetch(`${defaultApiHost}/private/stats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': `Bearer ${currentJwt ?? ''}`,
+        },
+        body: JSON.stringify({
+          appId: props.appId,
+          devicesId: props.deviceId ? [props.deviceId] : undefined,
+          search: search.value ? search.value : undefined,
+          order: getActiveOrder(columns.value),
+          rangeStart: paginatedRange.value.rangeStart,
+          rangeEnd: paginatedRange.value.rangeEnd,
+          actions: activeActions.value,
+        }),
+      })
+
+      if (!response.ok) {
+        console.log('Cannot get stats', response.status)
+        return
+      }
+
+      const dataD = await response.json() as LogData[]
+      // console.log('dataD', dataD)
+      elements.value.push(...dataD)
+    }
+    catch (err) {
+      console.log('Cannot get devices', err)
+    }
+  }
+  catch (error) {
+    console.error(error)
+  }
+  isLoading.value = false
 }
+
+function downloadText(filename: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+async function exportCsv() {
+  if (isExporting.value)
+    return
+  isExporting.value = true
+  const loadingToastId = toast.loading(t('exporting-logs'))
+  try {
+    const { data: currentSession } = await supabase.auth.getSession()!
+    if (!currentSession.session) {
+      toast.dismiss(loadingToastId)
+      toast.error(t('not-logged-in'))
+      return
+    }
+    const currentJwt = currentSession.session.access_token
+
+    const response = await fetch(`${defaultApiHost}/private/stats/export`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'authorization': `Bearer ${currentJwt ?? ''}`,
+      },
+      body: JSON.stringify({
+        appId: props.appId,
+        devicesId: props.deviceId ? [props.deviceId] : undefined,
+        search: search.value ? search.value : undefined,
+        order: getActiveOrder(columns.value),
+        rangeStart: range.value?.[0]?.toISOString(),
+        rangeEnd: range.value?.[1]?.toISOString(),
+        actions: activeActions.value,
+        format: 'csv',
+        limit: 10_000,
+      }),
+    })
+
+    if (!response.ok) {
+      const err = (await response.json().catch(() => ({}))) as { message?: string }
+      toast.dismiss(loadingToastId)
+      toast.error(err?.message || t('export-failed'))
+      return
+    }
+
+    const data = await response.json() as { csv: string, filename: string, contentType: string }
+    if (!data.csv || !data.filename) {
+      toast.dismiss(loadingToastId)
+      toast.error(t('export-failed'))
+      return
+    }
+
+    downloadText(data.filename, data.csv, data.contentType || 'text/csv; charset=utf-8')
+    toast.dismiss(loadingToastId)
+    toast.success(t('export-ready'))
+  }
+  catch (error) {
+    console.error(error)
+    toast.dismiss(loadingToastId)
+    toast.error(t('export-failed'))
+  }
+  finally {
+    isExporting.value = false
+  }
+}
+async function refreshData() {
+  // console.log('refreshData')
+  try {
+    currentPage.value = 1
+    elements.value.length = 0
+    await getData()
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+
+columns.value = [
+  {
+    label: t('created-at'),
+    key: 'created_at',
+    mobile: true,
+    class: 'truncate max-w-8',
+    sortable: 'desc',
+    displayFunction: (elem: Element) => formatDate(elem.created_at ?? ''),
+  },
+  {
+    label: t('device-id'),
+    key: 'device_id',
+    class: 'truncate max-w-8',
+    mobile: true,
+    sortable: true,
+    head: true,
+    onClick: (elem: Element) => openOne(elem),
+  },
+  {
+    label: t('action'),
+    key: 'action',
+    mobile: true,
+    class: 'truncate max-w-8',
+    sortable: true,
+    head: true,
+    displayFunction: (elem: Element) => formatAction(elem),
+    onClick: () => window.open(DOC_LOGS, '_blank', 'noopener,noreferrer'),
+  },
+  {
+    label: t('version'),
+    key: 'version_name',
+    class: 'truncate max-w-8',
+    mobile: false,
+    sortable: false,
+    displayFunction: (elem: Element) => {
+      const parsed = parseVersionName(elem.version_name)
+      return parsed.isFileSpecific
+        ? `${parsed.version} (${parsed.filename})`
+        : parsed.version
+    },
+    onClick: (elem: Element) => openOneVersion(elem),
+  },
+  {
+    label: t('metadata'),
+    key: 'metadata',
+    class: 'truncate max-w-48',
+    mobile: false,
+    sortable: false,
+    displayFunction: (elem: Element) => formatMetadata(elem),
+    onClick: (elem: Element) => copyMetadata(elem),
+  },
+]
+
+async function reload() {
+  try {
+    currentPage.value = 1
+    elements.value.length = 0
+    await getData()
+  }
+  catch (error) {
+    console.error(error)
+  }
+}
+async function openOneVersion(one: Element) {
+  if (props.deviceId || !props.appId)
+    return
+  if (!one.version) {
+    const loadingToastId = toast.loading(t('loading-version'))
+    // Extract version from composite format if present (e.g., "1.2.3:main.js" -> "1.2.3")
+    const parsed = parseVersionName(one.version_name)
+    const versionName = parsed.version
+
+    const { data: versionRecord, error } = await supabase
+      .from('app_versions')
+      .select('id')
+      .eq('app_id', props.appId)
+      .eq('name', versionName)
+      .single()
+    if (error || !versionRecord?.id) {
+      toast.dismiss(loadingToastId)
+      toast.error(t('cannot-find-version'))
+      return
+    }
+    one.version = versionRecord.id
+    toast.dismiss(loadingToastId)
+  }
+  if (one.version)
+    router.push(`/app/${props.appId}/bundle/${one.version}`)
+  else
+    toast.error(t('version-name-missing'))
+}
+async function openOne(one: Element) {
+  if (props.deviceId || !props.appId)
+    return
+  router.push(`/app/${props.appId}/device/${one.device_id}`)
+}
+onMounted(async () => {
+  initializeActionFilters()
+  await refreshData()
+})
+watch(columns, async () => {
+  await refreshData()
+}, { deep: true })
+watch(search, async () => {
+  await refreshData()
+})
+watch(() => props.appId, async () => {
+  await refreshData()
+})
+watch(() => props.deviceId, async () => {
+  await refreshData()
+})
+watch(() => props.actions, async () => {
+  await refreshData()
+})
+watch(actionFilters, async () => {
+  await refreshData()
+}, { deep: true })
+watch(range, async () => {
+  await refreshData()
+})
 </script>
 
 <template>
-  <div class="console-table-surface">
-    <div class="table-toolbar">
-      <div>
-        <p class="eyebrow">Logs</p>
-        <h2>{{ filteredStats.length }} shown</h2>
-      </div>
-      <div class="table-actions">
-        <label class="search-field">
-          <Search :size="16" />
-          <input v-model="search" name="log-search" type="search" placeholder="Search logs" aria-label="Search logs">
-        </label>
-        <select v-model="action" name="log-action" aria-label="Filter logs by action">
-          <option value="all">All actions</option>
-          <option v-for="name in actions" :key="name" :value="name">{{ name }}</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="table-scroll">
-      <table aria-label="Stats table">
-        <thead>
-          <tr>
-            <th>Action</th>
-            <th>Version</th>
-            <th>Platform</th>
-            <th>Device</th>
-            <th>Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="stat in filteredStats" :key="`${stat.action}-${stat.device_id}-${stat.created_at}`">
-            <td>{{ stat.action || '-' }}</td>
-            <td>{{ stat.version_name || '-' }}</td>
-            <td>{{ stat.platform || '-' }}</td>
-            <td>{{ stat.device_id || '-' }}</td>
-            <td>{{ formatDate(stat.created_at) }}</td>
-          </tr>
-          <tr v-if="filteredStats.length === 0">
-            <td colspan="5" class="empty">No update stats match these filters.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <div>
+    <TableLog
+      v-model:filters="actionFilters"
+      v-model:columns="columns"
+      v-model:current-page="currentPage"
+      v-model:search="search"
+      v-model:range="range"
+      :element-list="elements"
+      filter-text="filter-actions"
+      :is-loading="isLoading"
+      :exportable="true"
+      :export-loading="isExporting"
+      :auto-reload="false"
+      :app-id="props.appId ?? ''"
+      :search-placeholder="deviceId ? t('search-by-device-id-0') : t('search-by-device-id-')"
+      @reload="reload()" @reset="refreshData()" @export="exportCsv()"
+    />
   </div>
 </template>

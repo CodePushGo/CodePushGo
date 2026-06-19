@@ -68,7 +68,7 @@ describe('[Capgo parity] reasonLabel', () => {
       resolution_kind: 'auto_compatible',
       resolution_note: '   ',
     })
-    expect(reasonLabel(row)).toBe('Resolved automatically - the default became compatible again.')
+    expect(reasonLabel(row)).toBe('Resolved automatically — the default became compatible again.')
   })
 
   it.concurrent('formats a manual accept with the accepting user and the note', () => {
@@ -78,7 +78,7 @@ describe('[Capgo parity] reasonLabel', () => {
       resolution_kind: 'accepted',
       resolution_note: 'Released native 2.0.0.',
     })
-    expect(reasonLabel(row, 'jane@capgo.app')).toBe('Accepted by jane@capgo.app - Released native 2.0.0.')
+    expect(reasonLabel(row, 'jane@capgo.app')).toBe('Accepted by jane@capgo.app — Released native 2.0.0.')
   })
 
   it.concurrent('uses a generic actor when no accepting-user label is provided', () => {
@@ -88,7 +88,7 @@ describe('[Capgo parity] reasonLabel', () => {
       resolution_kind: 'accepted',
       resolution_note: 'Released native 2.0.0.',
     })
-    expect(reasonLabel(row)).toBe('Accepted by a team member - Released native 2.0.0.')
+    expect(reasonLabel(row)).toBe('Accepted by a team member — Released native 2.0.0.')
   })
 
   it.concurrent('drops the separator and note when a manual accept somehow has no note', () => {

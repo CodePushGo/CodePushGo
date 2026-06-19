@@ -1,0 +1,38 @@
+{
+  "base_domain": {
+    "prod": "console.codepushgo.com",
+    "preprod": "console.codepushgo.com",
+    "development": "localhost:5173",
+    "local": "localhost:3332"
+  },
+  "supa_anon": {
+    "prod": "sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO",
+    "preprod": "sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO",
+    "development": "sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO",
+    "local": "sb_publishable__EBHKsRnL--XAzmI7NWRww_q531-pQO"
+  },
+  "supa_url": {
+    "prod": "https://umpxowxnwroafuzynvwf.supabase.co",
+    "preprod": "https://umpxowxnwroafuzynvwf.supabase.co",
+    "development": "https://umpxowxnwroafuzynvwf.supabase.co",
+    "local": "http://localhost:54321"
+  },
+  "api_domain": {
+    "prod": "api.codepushgo.com",
+    "preprod": "api.codepushgo.com",
+    "development": "api.codepushgo.com",
+    "local": "localhost:54321/functions/v1"
+  },
+  "captcha_key": {
+    "prod": "0x4AAAAAAAxItBa5rCQ3Vvhl",
+    "preprod": "0x4AAAAAAAxItBa5rCQ3Vvhl",
+    "development": "0x4AAAAAAAxDbvW2bw7mcEZs",
+    "local": ""
+  },
+  "plugin_region_targets": {
+    "prod": "[{\"name\":\"eu\",\"envName\":\"codepushgo_plugin-eu-prod\",\"url\":\"https://plugin.eu.codepushgo.com/ok\"},{\"name\":\"me\",\"envName\":\"codepushgo_plugin-me-prod\",\"url\":\"https://plugin.me.codepushgo.com/ok\"},{\"name\":\"hk\",\"envName\":\"codepushgo_plugin-hk-prod\",\"url\":\"https://plugin.hk.codepushgo.com/ok\"},{\"name\":\"jp\",\"envName\":\"codepushgo_plugin-jp-prod\",\"url\":\"https://plugin.jp.codepushgo.com/ok\"},{\"name\":\"as\",\"envName\":\"codepushgo_plugin-as-prod\",\"url\":\"https://plugin.as.codepushgo.com/ok\"},{\"name\":\"na\",\"envName\":\"codepushgo_plugin-na-prod\",\"url\":\"https://plugin.na.codepushgo.com/ok\"},{\"name\":\"af\",\"envName\":\"codepushgo_plugin-af-prod\",\"url\":\"https://plugin.af.codepushgo.com/ok\"},{\"name\":\"oc\",\"envName\":\"codepushgo_plugin-oc-prod\",\"url\":\"https://plugin.oc.codepushgo.com/ok\"},{\"name\":\"sa\",\"envName\":\"codepushgo_plugin-sa-prod\",\"url\":\"https://plugin.sa.codepushgo.com/ok\"}]",
+    "preprod": "[{\"name\":\"eu\",\"envName\":\"codepushgo_plugin-eu-preprod\",\"url\":\"https://plugin.preprod.codepushgo.com/ok\"}]",
+    "development": "[{\"name\":\"alpha\",\"envName\":\"codepushgo_plugin-alpha\",\"url\":\"https://plugin.dev.codepushgo.com/ok\"}]",
+    "local": "[{\"name\":\"local\",\"envName\":\"codepushgo_plugin-local\",\"url\":\"http://localhost:8788/ok\"}]"
+  }
+}

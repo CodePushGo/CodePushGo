@@ -1,0 +1,10 @@
+import { app } from '../_backend/plugins/channel_self.ts'
+import { createAllCatch, createHono } from '../_backend/utils/hono.ts'
+import { version } from '../_backend/utils/version.ts'
+
+const functionName = 'channel_self'
+const appGlobal = createHono(functionName, version)
+
+appGlobal.route('/', app)
+createAllCatch(appGlobal, functionName)
+Deno.serve(appGlobal.fetch)

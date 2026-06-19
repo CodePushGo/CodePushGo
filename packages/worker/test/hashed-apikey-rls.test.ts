@@ -15,14 +15,14 @@ describe('[Capgo parity] hashed API key RLS support', () => {
   it('resolves API key identity from the capgkey header hash', () => {
     expect(migrationSql).toContain('CREATE OR REPLACE FUNCTION public.get_identity_apikey_only')
     expect(migrationSql).toContain("public.request_header('capgkey')")
-    expect(migrationSql).toContain("encode(digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')")
+    expect(migrationSql).toContain("encode(extensions.digest(COALESCE(public.request_header('capgkey'), ''), 'sha256'), 'hex')")
     expect(migrationSql).toContain('SELECT apikeys.rbac_id')
   })
 
   it('uses hashed API key checks for compatible release reads', () => {
     expect(migrationSql).toContain('CREATE OR REPLACE VIEW public.app_versions')
     expect(migrationSql).toContain('JOIN public.apikey_bindings ON apikey_bindings.apikey_id = apikeys.id')
-    expect(migrationSql).toContain('apikeys.key_hash = encode(digest(COALESCE(public.request_header(\'capgkey\'), \'\'), \'sha256\'), \'hex\')')
+    expect(migrationSql).toContain('apikeys.key_hash = encode(extensions.digest(COALESCE(public.request_header(\'capgkey\'), \'\'), \'sha256\'), \'hex\')')
     expect(migrationSql).toContain('(apikey_bindings.scope_type = \'app\' AND apikey_bindings.app_id = releases.app_id)')
     expect(migrationSql).toContain('(apikey_bindings.scope_type = \'org\' AND apikey_bindings.org_id = releases.owner_org)')
   })
